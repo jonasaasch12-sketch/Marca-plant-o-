@@ -112,9 +112,10 @@ function colecao(nome){return fs.collection('users').doc(usuario.uid).collection
 
 async function carregarDados(){
   const tempo=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado. Confirme no Firebase que o Firestore Database foi criado e que as regras foram publicadas.')),10000));
-  const [l,p]=await Promise.race([Promise.all([colecao('locais').get(),colecao('plantoes').get()]),tempo]);
+  const [l,p,m]=await Promise.race([Promise.all([colecao('locais').get(),colecao('plantoes').get(),colecao('modelos').get()]),tempo]);
   db.locais=l.docs.map(d=>({...d.data(),id:d.id}));
   db.plantoes=p.docs.map(d=>({...d.data(),id:d.id}));
+  db.modelos=m.docs.map(d=>({...d.data(),id:d.id}));
 }
 
 // grava uma lista de {c:'plantoes'|'locais', obj}, em lotes de 400
@@ -241,9 +242,9 @@ function render(){
     main.innerHTML=vLogin();
     return;
   }
-  const abas=[['cal','📅','Calendário'],['pag','💰','Pagamentos'],['loc','📍','Locais'],['aj','⚙️','Ajustes']];
+  const abas=[['cal','📅','Calendário'],['pag','💰','Pagamentos'],['loc','🗂️','Cadastros'],['aj','⚙️','Ajustes']];
   nav.innerHTML=abas.map(([k,i,t])=>`<button class="${aba===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${t}</button>`).join('');
-  const titulos={cal:'Marca Plantão',pag:'Pagamentos',loc:'Locais',aj:'Ajustes'};
+  const titulos={cal:'Marca Plantão',pag:'Pagamentos',loc:'Cadastros',aj:'Ajustes'};
   top.textContent=titulos[aba];
   fab.style.display=(aba==='cal'||aba==='pag')?'flex':'none';
   const views={cal:vCalendario,pag:vPagamentos,loc:vLocais,aj:vAjustes};
@@ -323,18 +324,29 @@ function vPagamentos(){
 }
 
 function vLocais(){
-  let h='<button class="btn primary" style="width:100%;margin-bottom:8px" onclick="editarLocal()">+ Novo local</button>';
-  h+='<button class="btn" style="width:100%;margin-bottom:12px" onclick="abrirResumo(\'todos\')">Resumo geral para nota</button>';
-  if(!db.locais.length)h+='<p class="vazio">Cadastre seus locais (hospitais, UPAs etc.). Ao escolher um local no plantão, a cor e o valor são preenchidos automaticamente.</p>';
+  const modelos=db.modelos||[];
+  let h='<h3 class="sub" style="margin-top:0">Modelos de plantão</h3>';
+  h+='<button class="btn primary" style="width:100%;margin-bottom:10px" onclick="editarModelo()">+ Novo modelo</button>';
+  if(!modelos.length)h+='<p class="vazio">Crie modelos como "Clínica médica" ou "Pediatria", com local, valor e horário. Depois é só usar quando quiser.</p>';
+  h+=modelos.map(m=>`<div class="card" style="border-left:6px solid ${m.cor}" onclick="editarModelo('${m.id}')">
+    <div class="linha"><span class="nome" style="margin:0">${esc(m.nome)}</span><span class="valor">${dinheiro(m.valor)}</span></div>
+    <div class="muted" style="margin-top:4px">📍 ${esc(nomeLocal(m.localId))} · ${m.hini} – ${m.hfim}</div>
+    <div class="linha" style="margin-top:8px"><span class="muted">Dia selecionado: ${dataBR(diaSel+'T00:00').slice(0,5)}</span>
+    <button class="pill ok" style="background:var(--primary)" onclick="event.stopPropagation();usarModeloNoDia('${m.id}')">Usar neste dia</button></div>
+  </div>`).join('');
+  h+='<h3 class="sub">Locais</h3>';
+  h+='<button class="btn" style="width:100%;margin-bottom:10px" onclick="editarLocal()">+ Novo local</button>';
+  if(!db.locais.length)h+='<p class="vazio">Locais agrupam seus plantões (ex.: Hospital Tricentenário).</p>';
   h+=db.locais.map(l=>{
     const ps=db.plantoes.filter(p=>p.localId===l.id);
     const tot=ps.reduce((s,p)=>s+Number(p.valor||0),0);
     return `<div class="card" style="border-left:6px solid ${l.cor}" onclick="editarLocal('${l.id}')">
-      <div class="linha"><span class="nome" style="margin:0">${esc(l.nome)}</span><span class="valor">${dinheiro(l.valor)}</span></div>
+      <div class="nome" style="margin:0">${esc(l.nome)}</div>
       <div class="linha" style="margin-top:8px"><span class="muted">${ps.length} ${ps.length===1?'plantão':'plantões'} · ${dinheiro(tot)} no total</span>
       <button class="pill ok" style="background:var(--primary)" onclick="event.stopPropagation();abrirResumo('${l.id}')">Resumo / nota</button></div>
     </div>`;
   }).join('');
+  h+='<button class="btn" style="width:100%;margin-top:6px" onclick="abrirResumo(\'todos\')">Resumo geral para nota</button>';
   return h;
 }
 
@@ -383,6 +395,7 @@ function formPlantao(p,novo){
   const locs=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}" ${l.id===p.localId?'selected':''}>${esc(l.nome)}</option>`)].join('');
   abrirForm(`
     <h2>${novo?'Novo plantão':'Editar plantão'}</h2>
+    ${novo?`<label>Usar um modelo</label><select id="f_modelo" onchange="aplicarModelo()"><option value="">Nenhum</option>${opcoesModelos()}</select>`:''}
     <label>Nome</label><input id="f_nome" value="${esc(p.nome)}" placeholder="Ex.: Plantão noturno">
     <label>Local</label><select id="f_local" onchange="localEscolhido()">${locs}</select>
     <label>Cor</label><div class="cores" id="f_cores">${swatches(p.cor)}</div><input type="hidden" id="f_cor" value="${p.cor}">
@@ -406,7 +419,6 @@ function localEscolhido(){
   const l=local(document.getElementById('f_local').value);
   if(!l)return;
   escolherCor(l.cor);
-  document.getElementById('f_valor').value=l.valor||'';
 }
 
 function salvarPlantao(id){
@@ -459,7 +471,6 @@ function editarLocal(id){
     <h2>${id?'Editar local':'Novo local'}</h2>
     <label>Nome do local</label><input id="l_nome" value="${esc(l.nome)}" placeholder="Ex.: UPA Caxangá">
     <label>Cor</label><div class="cores" id="f_cores">${swatches(l.cor)}</div><input type="hidden" id="f_cor" value="${l.cor}">
-    <label>Valor padrão do plantão (R$)</label><input id="l_valor" inputmode="decimal" value="${l.valor}">
     <div class="acoes">
       ${id?`<button class="btn danger" onclick="excluirLocal('${id}')">Excluir</button>`:''}
       <div class="direita">
@@ -474,8 +485,7 @@ function salvarLocal(id){
   if(!nome){alert('Dê um nome ao local.');return;}
   const dados={
     nome,
-    cor:document.getElementById('f_cor').value,
-    valor:parseFloat(String(document.getElementById('l_valor').value).replace(',','.'))||0
+    cor:document.getElementById('f_cor').value
   };
   let obj;
   if(id){obj=local(id);Object.assign(obj,dados);}
@@ -516,9 +526,11 @@ function importar(input){
     try{
       await apagarColecao('plantoes');
       await apagarColecao('locais');
+      await apagarColecao('modelos');
       await gravar([
         ...d.locais.map(obj=>({c:'locais',obj})),
-        ...d.plantoes.map(obj=>({c:'plantoes',obj}))
+        ...d.plantoes.map(obj=>({c:'plantoes',obj})),
+        ...(d.modelos||[]).map(obj=>({c:'modelos',obj}))
       ]);
       await carregarDados();
       render();
@@ -532,7 +544,8 @@ async function apagarTudo(){
   try{
     await apagarColecao('plantoes');
     await apagarColecao('locais');
-    db={locais:[],plantoes:[]};
+    await apagarColecao('modelos');
+    db={locais:[],plantoes:[],modelos:[]};
     render();
   }catch(e){alert('Erro ao apagar: '+e.message);}
 }
@@ -594,6 +607,7 @@ function abrirVarios(){
   const opts=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`)].join('');
   abrirForm(`
     <h2>Vários plantões</h2>
+    <label>Usar um modelo</label><select id="v_modelo" onchange="aplicarModeloVarios()"><option value="">Nenhum</option>${opcoesModelos()}</select>
     <p class="muted" style="margin:0">Toque nos dias em que você trabalha. Cada dia marcado vira um plantão com os dados abaixo.</p>
     <div class="mesnav" style="margin-top:10px"><button onclick="mudaMesVarios(-1)">‹</button><strong id="v_mes"></strong><button onclick="mudaMesVarios(1)">›</button></div>
     <div class="semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
@@ -636,7 +650,6 @@ function varLocal(){
   const l=local(document.getElementById('v_local').value);
   if(!l)return;
   escolherCor(l.cor);
-  document.getElementById('v_valor').value=l.valor||'';
 }
 function salvarVarios(){
   const g=x=>document.getElementById(x).value;
@@ -746,6 +759,88 @@ function copiarNota(){
   try{ok=document.execCommand('copy');}catch(e){}
   t.setAttribute('readonly','');
   alert(ok?'Texto copiado. Agora é só colar na nota.':'Não consegui copiar automaticamente. Toque no texto, selecione tudo e copie.');
+}
+
+/* ============ MODELOS DE PLANTÃO ============ */
+function opcoesModelos(){
+  return (db.modelos||[]).map(m=>`<option value="${m.id}">${esc(m.nome)}</option>`).join('');
+}
+function aplicarModelo(){
+  const m=(db.modelos||[]).find(x=>x.id===document.getElementById('f_modelo').value);
+  if(!m)return;
+  const dia=document.getElementById('f_ini').value.split('T')[0]||diaSel;
+  const ini=dia+'T'+m.hini;
+  let fim=dia+'T'+m.hfim;
+  if(parseDT(fim)<=parseDT(ini))fim=addDias(fim,1);
+  document.getElementById('f_nome').value=m.nome;
+  document.getElementById('f_local').value=m.localId||'';
+  escolherCor(m.cor);
+  document.getElementById('f_valor').value=m.valor||'';
+  document.getElementById('f_ini').value=ini;
+  document.getElementById('f_fim').value=fim;
+}
+function aplicarModeloVarios(){
+  const m=(db.modelos||[]).find(x=>x.id===document.getElementById('v_modelo').value);
+  if(!m)return;
+  document.getElementById('v_nome').value=m.nome;
+  document.getElementById('v_local').value=m.localId||'';
+  escolherCor(m.cor);
+  document.getElementById('v_valor').value=m.valor||'';
+  document.getElementById('v_ini').value=m.hini;
+  document.getElementById('v_fim').value=m.hfim;
+}
+function usarModeloNoDia(id){
+  const m=(db.modelos||[]).find(x=>x.id===id);
+  if(!m)return;
+  const base={id:'',nome:m.nome,localId:m.localId||null,cor:m.cor,valor:m.valor||'',
+    inicio:diaSel+'T'+m.hini,fim:diaSel+'T'+m.hfim,pago:false,dataPagamento:'',obs:''};
+  if(parseDT(base.fim)<=parseDT(base.inicio))base.fim=addDias(base.fim,1);
+  aba='cal';
+  formPlantao(base,true);
+}
+function editarModelo(id){
+  const m=id?(db.modelos||[]).find(x=>x.id===id):{id:'',nome:'',localId:'',cor:CORES[4],valor:'',hini:'07:00',hfim:'19:00'};
+  const locs=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}" ${l.id===m.localId?'selected':''}>${esc(l.nome)}</option>`)].join('');
+  abrirForm(`
+    <h2>${id?'Editar modelo':'Novo modelo de plantão'}</h2>
+    <label>Nome do plantão</label><input id="m_nome" value="${esc(m.nome)}" placeholder="Ex.: Clínica médica">
+    <label>Local</label><select id="m_local">${locs}</select>
+    <label>Cor</label><div class="cores" id="f_cores">${swatches(m.cor)}</div><input type="hidden" id="f_cor" value="${m.cor}">
+    <label>Valor (R$)</label><input id="m_valor" inputmode="decimal" value="${m.valor||''}">
+    <label>Horário de início</label><input id="m_ini" type="time" value="${m.hini}">
+    <label>Horário de fim</label><input id="m_fim" type="time" value="${m.hfim}">
+    <div class="acoes">
+      ${id?`<button class="btn danger" onclick="excluirModelo('${id}')">Excluir</button>`:''}
+      <div class="direita">
+        <button class="btn" onclick="fechar()">Cancelar</button>
+        <button class="btn primary" onclick="salvarModelo('${id||''}')">Salvar</button>
+      </div>
+    </div>`);
+}
+function salvarModelo(id){
+  const g=x=>document.getElementById(x).value;
+  const nome=g('m_nome').trim();
+  if(!nome){alert('Dê um nome ao plantão.');return;}
+  const dados={
+    nome,
+    localId:g('m_local')||null,
+    cor:g('f_cor'),
+    valor:parseFloat(String(g('m_valor')).replace(',','.'))||0,
+    hini:g('m_ini')||'07:00',
+    hfim:g('m_fim')||'19:00'
+  };
+  let obj;
+  if(id){obj=db.modelos.find(x=>x.id===id);Object.assign(obj,dados);}
+  else{obj={id:uid(),...dados};db.modelos=db.modelos||[];db.modelos.push(obj);}
+  gravarSeguro([{c:'modelos',obj}]);
+  fechar();render();
+}
+function excluirModelo(id){
+  if(!confirm('Excluir este modelo? Os plantões já criados não são apagados.'))return;
+  db.modelos=(db.modelos||[]).filter(m=>m.id!==id);
+  fs.collection('users').doc(usuario.uid).collection('modelos').doc(id).delete()
+    .catch(e=>alert('Não consegui excluir na nuvem: '+e.message));
+  fechar();render();
 }
 
 render();
