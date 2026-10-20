@@ -65,6 +65,8 @@ input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);borde
 .acoes-swipe button{flex:1;border:0;color:#fff;font-weight:600;font-size:14px;cursor:pointer}
 .sw-pago{background:var(--ok)}
 .sw-del{background:var(--no)}
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-150%);background:var(--ok);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;transition:transform .25s;max-width:90%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+#toast.on{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -328,11 +330,12 @@ function vLocais(){
   let h='<h3 class="sub" style="margin-top:0">Modelos de plantão</h3>';
   h+='<button class="btn primary" style="width:100%;margin-bottom:10px" onclick="editarModelo()">+ Novo modelo</button>';
   if(!modelos.length)h+='<p class="vazio">Crie modelos como "Clínica médica" ou "Pediatria", com local, valor e horário. Depois é só usar quando quiser.</p>';
+  h+=`<p class="muted" style="margin:0 0 8px">Dia selecionado: <b>${dataBR(diaSel+'T00:00')}</b></p>`;
   h+=modelos.map(m=>`<div class="card" style="border-left:6px solid ${m.cor}" onclick="editarModelo('${m.id}')">
     <div class="linha"><span class="nome" style="margin:0">${esc(m.nome)}</span><span class="valor">${dinheiro(m.valor)}</span></div>
     <div class="muted" style="margin-top:4px">📍 ${esc(nomeLocal(m.localId))} · ${m.hini} – ${m.hfim}</div>
-    <div class="linha" style="margin-top:8px"><span class="muted">Dia selecionado: ${dataBR(diaSel+'T00:00').slice(0,5)}</span>
-    <button class="pill ok" style="background:var(--primary)" onclick="event.stopPropagation();usarModeloNoDia('${m.id}')">Usar neste dia</button></div>
+    <div class="linha" style="margin-top:8px"><span class="muted">Toque para lançar no dia</span>
+    <button class="pill no" onclick="event.stopPropagation();criarModeloNoDia('${m.id}')">Criar como Não Pago</button></div>
   </div>`).join('');
   h+='<h3 class="sub">Locais</h3>';
   h+='<button class="btn" style="width:100%;margin-bottom:10px" onclick="editarLocal()">+ Novo local</button>';
@@ -834,6 +837,28 @@ function salvarModelo(id){
   else{obj={id:uid(),...dados};db.modelos=db.modelos||[];db.modelos.push(obj);}
   gravarSeguro([{c:'modelos',obj}]);
   fechar();render();
+}
+function criarModeloNoDia(id){
+  const m=(db.modelos||[]).find(x=>x.id===id);
+  if(!m)return;
+  const ini=diaSel+'T'+m.hini;
+  let fim=diaSel+'T'+m.hfim;
+  if(parseDT(fim)<=parseDT(ini))fim=addDias(fim,1);
+  const obj={id:uid(),nome:m.nome,localId:m.localId||null,cor:m.cor,valor:m.valor||0,
+    inicio:ini,fim,pago:false,dataPagamento:'',obs:''};
+  db.plantoes.push(obj);
+  gravarSeguro([{c:'plantoes',obj}]);
+  aba='cal';
+  render();
+  mostrarAviso('Plantão criado com sucesso.');
+}
+function mostrarAviso(texto){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
+  t.textContent=texto;
+  t.classList.add('on');
+  clearTimeout(t._h);
+  t._h=setTimeout(()=>t.classList.remove('on'),2200);
 }
 function excluirModelo(id){
   if(!confirm('Excluir este modelo? Os plantões já criados não são apagados.'))return;
