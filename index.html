@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16807a">
+<title>Marca Plantão</title>
+<style>
+:root{--primary:#16807a;--bg:#f4f6f6;--card:#ffffff;--text:#1c2425;--muted:#6a7677;--line:#e1e6e6;--ok:#1e8e3e;--no:#d93025}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0f1414;--card:#1a2223;--text:#eef3f3;--muted:#98a6a6;--line:#2b3637}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:84px}
+header{position:sticky;top:0;z-index:5;background:var(--primary);color:#fff;padding:14px 16px;font-size:18px;font-weight:600}
+main{padding:12px 16px;max-width:640px;margin:0 auto}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;border:0;background:none;color:var(--muted);padding:8px 0 10px;font-size:12px;cursor:pointer}
+nav button.on{color:var(--primary);font-weight:600}
+nav i{display:block;font-style:normal;font-size:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+.linha{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hora{font-size:15px;font-weight:600}
+.valor{font-weight:600}
+.nome{font-size:17px;font-weight:700;margin:4px 0}
+.muted{color:var(--muted);font-size:14px}
+.pill{border:0;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:#fff;cursor:pointer}
+.pill.ok{background:var(--ok)}
+.pill.no{background:var(--no)}
+.mesnav{display:flex;justify-content:space-between;align-items:center;margin:4px 0 10px;text-transform:capitalize}
+.mesnav button,.btn{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:16px;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:600}
+.btn.danger{color:var(--no)}
+.semana,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.semana{font-size:12px;color:var(--muted);margin-bottom:4px}
+.dia{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 0;min-height:52px;color:var(--text);cursor:pointer;font-size:14px}
+.dia.hoje{border-color:var(--primary);font-weight:700}
+.dia.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+.dots{display:flex;justify-content:center;gap:3px;margin-top:4px;height:6px}
+.dots i{width:6px;height:6px;border-radius:50%;display:block}
+h3.sub{margin:16px 0 8px;font-size:15px;text-transform:capitalize}
+.vazio{color:var(--muted);text-align:center;padding:20px 8px}
+.totais{display:flex;gap:10px;margin-bottom:12px}
+.totais div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.totais small{color:var(--muted);display:block}
+.totais b{font-size:16px}
+.filtros{display:flex;gap:6px;margin-bottom:12px}
+.filtros button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:14px;cursor:pointer}
+.filtros button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.fab{position:fixed;right:18px;bottom:84px;width:56px;height:56px;border-radius:50%;border:0;background:var(--primary);color:#fff;font-size:30px;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:var(--bg);color:var(--text);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 8px;font-size:18px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:16px;font-family:inherit}
+.check{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:15px;color:var(--text)}
+.check input{width:auto}
+.cores{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.cores button{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}
+.cores button.on{border-color:var(--text)}
+.acoes{display:flex;gap:8px;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
+.acoes .direita{display:flex;gap:8px;margin-left:auto}
+.erro{color:var(--no);font-size:14px;min-height:20px;margin:8px 0 0}
+</style>
+</head>
+<body>
+<header id="top">Marca Plantão</header>
+<main id="conteudo"><p class="vazio">Carregando…</p></main>
+<button class="fab" id="fab" onclick="novoPlantao()" aria-label="Novo plantão" style="display:none">+</button>
+<nav id="nav"></nav>
+
+<!-- Firebase (SDK compatível, versão fixa) -->
+<script src="https://cdn.jsdelivr.net/npm/firebase@11.6.1/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@11.6.1/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@11.6.1/firebase-firestore-compat.js"></script>
+
+<script>
+/* ============ CONFIGURAÇÃO DO FIREBASE ============ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAZtXzGXek3mKX2t3-QhAhmois1m1HeDUs",
+  authDomain: "marca-plantao.firebaseapp.com",
+  projectId: "marca-plantao",
+  storageBucket: "marca-plantao.firebasestorage.app",
+  messagingSenderId: "566340164573",
+  appId: "1:566340164573:web:4993aed82b9cc26b5a7434"
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const fs = firebase.firestore();
+fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+
+/* ============ ESTADO ============ */
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const CORES=['#e53935','#d81b60','#8e24aa','#3949ab','#1e88e5','#00897b','#43a047','#fb8c00','#6d4c41','#546e7a'];
+
+let db={locais:[],plantoes:[]};
+let usuario=null;
+let pronto=false;
+let aba='cal';
+let mes=new Date();
+mes=new Date(mes.getFullYear(),mes.getMonth(),1);
+let diaSel=iso(new Date());
+let filtroPag='todos';
+
+/* ============ FIRESTORE ============ */
+function colecao(nome){return fs.collection('users').doc(usuario.uid).collection(nome);}
+
+async function carregarDados(){
+  const [l,p]=await Promise.all([colecao('locais').get(),colecao('plantoes').get()]);
+  db.locais=l.docs.map(d=>({...d.data(),id:d.id}));
+  db.plantoes=p.docs.map(d=>({...d.data(),id:d.id}));
+}
+
+// grava uma lista de {c:'plantoes'|'locais', obj}, em lotes de 400
+async function gravar(itens){
+  for(let i=0;i<itens.length;i+=400){
+    const b=fs.batch();
+    itens.slice(i,i+400).forEach(({c,obj})=>{
+      const {id,...resto}=obj;
+      b.set(colecao(c).doc(id),resto);
+    });
+    await b.commit();
+  }
+}
+function gravarSeguro(itens){
+  gravar(itens).catch(e=>alert('Não consegui salvar na nuvem. Verifique a conexão.\n'+e.message));
+}
+async function apagarColecao(nome){
+  const s=await colecao(nome).get();
+  for(let i=0;i<s.docs.length;i+=400){
+    const b=fs.batch();
+    s.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));
+    await b.commit();
+  }
+}
+
+/* ============ LOGIN ============ */
+auth.onAuthStateChanged(async u=>{
+  usuario=u;
+  if(u){
+    try{await carregarDados();}catch(e){alert('Erro ao carregar seus dados: '+e.message);}
+  }else{
+    db={locais:[],plantoes:[]};
+  }
+  pronto=true;
+  render();
+});
+
+function msgErro(e){
+  const m={
+    'auth/invalid-email':'E-mail inválido.',
+    'auth/invalid-credential':'E-mail ou senha incorretos.',
+    'auth/user-not-found':'E-mail ou senha incorretos.',
+    'auth/wrong-password':'E-mail ou senha incorretos.',
+    'auth/email-already-in-use':'Este e-mail já tem conta. Tente entrar.',
+    'auth/weak-password':'Use uma senha com pelo menos 6 caracteres.',
+    'auth/too-many-requests':'Muitas tentativas. Aguarde e tente de novo.',
+    'auth/network-request-failed':'Sem conexão com a internet.'
+  };
+  return m[e.code]||'Não foi possível concluir. Tente novamente.';
+}
+function lerLogin(){return [document.getElementById('a_email').value.trim(),document.getElementById('a_senha').value];}
+async function entrar(){
+  const [e,s]=lerLogin();
+  try{await auth.signInWithEmailAndPassword(e,s);}
+  catch(err){document.getElementById('a_msg').textContent=msgErro(err);}
+}
+async function criarConta(){
+  const [e,s]=lerLogin();
+  try{await auth.createUserWithEmailAndPassword(e,s);}
+  catch(err){document.getElementById('a_msg').textContent=msgErro(err);}
+}
+async function esqueciSenha(){
+  const e=document.getElementById('a_email').value.trim();
+  if(!e){alert('Digite seu e-mail primeiro.');return;}
+  try{await auth.sendPasswordResetEmail(e);alert('Se o e-mail existir, enviamos um link para redefinir a senha.');}
+  catch(err){alert(msgErro(err));}
+}
+async function sair(){await auth.signOut();}
+
+/* ============ UTILIDADES ============ */
+function p2(n){return String(n).padStart(2,'0');}
+function iso(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function parseDT(s){
+  const [d,t]=s.split('T');const [y,m,dd]=d.split('-').map(Number);const [h,mi]=t.split(':').map(Number);
+  return new Date(y,m-1,dd,h,mi);
+}
+function dataBR(s){const [y,m,d]=s.split('T')[0].split('-');return `${d}/${m}/${y}`;}
+function hora(s){return s.split('T')[1];}
+function addDias(s,n){const d=parseDT(s);d.setDate(d.getDate()+n);return iso(d)+'T'+hora(s);}
+function addDiasISO(s,n){
+  if(!s)return '';
+  const [y,m,d]=s.split('-').map(Number);
+  return iso(new Date(y,m-1,d+n));
+}
+function dinheiro(v){return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function diaDe(p){return p.inicio.split('T')[0];}
+function local(id){return db.locais.find(l=>l.id===id);}
+function nomeLocal(id){const l=local(id);return l?l.nome:'Sem local';}
+function corDe(p){return p.cor||'#16807a';}
+function doMes(p){return diaDe(p).slice(0,7)===iso(mes).slice(0,7);}
+
+/* ============ NAVEGAÇÃO ============ */
+function ir(a){aba=a;render();window.scrollTo(0,0);}
+function mudaMes(n){mes=new Date(mes.getFullYear(),mes.getMonth()+n,1);render();}
+function selDia(d){diaSel=d;render();}
+function setFiltro(f){filtroPag=f;render();}
+function togglePago(id){
+  const p=db.plantoes.find(x=>x.id===id);if(!p)return;
+  p.pago=!p.pago;
+  if(p.pago&&!p.dataPagamento)p.dataPagamento=iso(new Date());
+  gravarSeguro([{c:'plantoes',obj:p}]);
+  render();
+}
+
+/* ============ RENDERIZAÇÃO ============ */
+function render(){
+  const top=document.getElementById('top');
+  const fab=document.getElementById('fab');
+  const nav=document.getElementById('nav');
+  const main=document.getElementById('conteudo');
+
+  if(!pronto){main.innerHTML='<p class="vazio">Carregando…</p>';nav.innerHTML='';fab.style.display='none';return;}
+  if(!usuario){
+    top.textContent='Marca Plantão';
+    nav.innerHTML='';fab.style.display='none';
+    main.innerHTML=vLogin();
+    return;
+  }
+  const abas=[['cal','📅','Calendário'],['pag','💰','Pagamentos'],['loc','📍','Locais'],['aj','⚙️','Ajustes']];
+  nav.innerHTML=abas.map(([k,i,t])=>`<button class="${aba===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${t}</button>`).join('');
+  const titulos={cal:'Marca Plantão',pag:'Pagamentos',loc:'Locais',aj:'Ajustes'};
+  top.textContent=titulos[aba];
+  fab.style.display=(aba==='cal'||aba==='pag')?'flex':'none';
+  const views={cal:vCalendario,pag:vPagamentos,loc:vLocais,aj:vAjustes};
+  main.innerHTML=views[aba]();
+}
+
+function vLogin(){
+  return `<div class="card" style="cursor:default;margin-top:24px">
+    <h2 style="margin:0 0 4px">Entrar</h2>
+    <p class="muted" style="margin:0 0 4px">Seus plantões ficam salvos na sua conta e aparecem em qualquer aparelho.</p>
+    <label>E-mail</label><input id="a_email" type="email" autocomplete="email">
+    <label>Senha</label><input id="a_senha" type="password" autocomplete="current-password">
+    <div class="acoes">
+      <button class="btn" onclick="criarConta()">Criar conta</button>
+      <div class="direita"><button class="btn primary" onclick="entrar()">Entrar</button></div>
+    </div>
+    <p style="margin:12px 0 0;text-align:center"><button class="btn" style="border:0;background:none;color:var(--primary)" onclick="esqueciSenha()">Esqueci minha senha</button></p>
+    <p id="a_msg" class="erro"></p>
+  </div>`;
+}
+
+function cardPlantao(p,comData){
+  const cruza=diaDe(p)!==p.fim.split('T')[0];
+  return `<div class="card" style="border-left:6px solid ${corDe(p)}" onclick="editarPlantao('${p.id}')">
+    ${comData?`<div class="muted" style="margin-bottom:4px">${dataBR(p.inicio)}</div>`:''}
+    <div class="linha"><span class="hora">${hora(p.inicio)} – ${hora(p.fim)}${cruza?' <small class="muted">(+1 dia)</small>':''}</span><span class="valor">${dinheiro(p.valor)}</span></div>
+    <div class="nome">${esc(p.nome||'Sem nome')}</div>
+    <div class="linha"><span class="muted">📍 ${esc(nomeLocal(p.localId))}</span>
+    <button class="pill ${p.pago?'ok':'no'}" onclick="event.stopPropagation();togglePago('${p.id}')">${p.pago?'Pago':'Não pago'}</button></div>
+  </div>`;
+}
+
+function vCalendario(){
+  const ano=mes.getFullYear(),m=mes.getMonth();
+  const vazios=new Date(ano,m,1).getDay();
+  const dias=new Date(ano,m+1,0).getDate();
+  const hoje=iso(new Date());
+  let h=`<div class="mesnav"><button onclick="mudaMes(-1)">‹</button><strong>${MESES[m]} ${ano}</strong><button onclick="mudaMes(1)">›</button></div>`;
+  h+='<div class="semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div><div class="grid">';
+  for(let i=0;i<vazios;i++)h+='<div></div>';
+  for(let d=1;d<=dias;d++){
+    const k=`${ano}-${p2(m+1)}-${p2(d)}`;
+    const pts=db.plantoes.filter(p=>diaDe(p)===k).slice(0,3).map(p=>`<i style="background:${corDe(p)}"></i>`).join('');
+    h+=`<button class="dia${k===hoje?' hoje':''}${k===diaSel?' sel':''}" onclick="selDia('${k}')">${d}<span class="dots">${pts}</span></button>`;
+  }
+  h+='</div>';
+  const lista=db.plantoes.filter(p=>diaDe(p)===diaSel).sort((a,b)=>a.inicio.localeCompare(b.inicio));
+  const [y,mm,dd]=diaSel.split('-').map(Number);
+  const nomeDia=new Date(y,mm-1,dd).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  h+=`<h3 class="sub">${nomeDia}</h3>`;
+  h+=lista.length?lista.map(p=>cardPlantao(p,false)).join(''):'<p class="vazio">Nenhum plantão neste dia.</p>';
+  h+=`<button class="btn" style="width:100%" onclick="novoPlantao()">+ Adicionar plantão neste dia</button>`;
+  return h;
+}
+
+function vPagamentos(){
+  const ano=mes.getFullYear(),m=mes.getMonth();
+  const lista=db.plantoes.filter(doMes).sort((a,b)=>a.inicio.localeCompare(b.inicio));
+  const pagos=lista.filter(p=>p.pago), naoPagos=lista.filter(p=>!p.pago);
+  const soma=l=>l.reduce((s,p)=>s+Number(p.valor||0),0);
+  const visiveis=filtroPag==='pagos'?pagos:filtroPag==='nao'?naoPagos:lista;
+  let h=`<div class="mesnav"><button onclick="mudaMes(-1)">‹</button><strong>${MESES[m]} ${ano}</strong><button onclick="mudaMes(1)">›</button></div>`;
+  h+=`<div class="totais">
+    <div><small>Recebido</small><b style="color:var(--ok)">${dinheiro(soma(pagos))}</b></div>
+    <div><small>A receber</small><b style="color:var(--no)">${dinheiro(soma(naoPagos))}</b></div>
+  </div>`;
+  h+=`<div class="filtros">${[['todos','Todos'],['nao','Não pagos'],['pagos','Pagos']]
+    .map(([k,t])=>`<button class="${filtroPag===k?'on':''}" onclick="setFiltro('${k}')">${t}</button>`).join('')}</div>`;
+  h+=visiveis.length?visiveis.map(p=>cardPlantao(p,true)).join(''):'<p class="vazio">Nada por aqui neste mês.</p>';
+  return h;
+}
+
+function vLocais(){
+  let h='<button class="btn primary" style="width:100%;margin-bottom:12px" onclick="editarLocal()">+ Novo local</button>';
+  if(!db.locais.length)h+='<p class="vazio">Cadastre seus locais (hospitais, UPAs etc.). Ao escolher um local no plantão, a cor e o valor são preenchidos automaticamente.</p>';
+  h+=db.locais.map(l=>`<div class="card" style="border-left:6px solid ${l.cor}" onclick="editarLocal('${l.id}')">
+    <div class="linha"><span class="nome" style="margin:0">${esc(l.nome)}</span><span class="valor">${dinheiro(l.valor)}</span></div></div>`).join('');
+  return h;
+}
+
+function vAjustes(){
+  return `<div class="card" style="cursor:default">
+    <p style="margin:0 0 10px">Conectado como <b>${esc(usuario.email)}</b>.</p>
+    <button class="btn" style="width:100%" onclick="sair()">Sair da conta</button>
+  </div>
+  <div class="card" style="cursor:default">
+    <p style="margin:0 0 10px">Faça um backup de vez em quando, para ter uma cópia guardada no seu aparelho.</p>
+    <button class="btn primary" style="width:100%" onclick="exportar()">Exportar backup (.json)</button>
+    <label>Restaurar backup</label>
+    <input type="file" accept="application/json,.json" onchange="importar(this)">
+  </div>
+  <div class="card" style="cursor:default">
+    <button class="btn danger" style="width:100%" onclick="apagarTudo()">Apagar todos os meus dados</button>
+  </div>
+  <p class="muted" style="text-align:center">${db.plantoes.length} plantões · ${db.locais.length} locais</p>`;
+}
+
+/* ============ MODAL ============ */
+function abrirForm(html){
+  fechar();
+  const o=document.createElement('div');
+  o.className='overlay';o.id='ov';
+  o.innerHTML=`<div class="sheet">${html}</div>`;
+  o.addEventListener('click',e=>{if(e.target===o)fechar();});
+  document.body.appendChild(o);
+}
+function fechar(){const o=document.getElementById('ov');if(o)o.remove();}
+function escolherCor(c){
+  document.getElementById('f_cor').value=c;
+  document.querySelectorAll('#f_cores button').forEach(b=>b.classList.toggle('on',b.dataset.cor===c));
+}
+function swatches(atual){
+  return CORES.map(c=>`<button type="button" data-cor="${c}" style="background:${c}" class="${c===atual?'on':''}" onclick="escolherCor('${c}')"></button>`).join('');
+}
+
+/* ============ PLANTÕES ============ */
+function novoPlantao(){
+  formPlantao({id:'',nome:'',localId:null,cor:CORES[4],valor:'',inicio:diaSel+'T07:00',fim:diaSel+'T19:00',pago:false,dataPagamento:'',obs:''},true);
+}
+function editarPlantao(id){formPlantao(db.plantoes.find(p=>p.id===id),false);}
+
+function formPlantao(p,novo){
+  const locs=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}" ${l.id===p.localId?'selected':''}>${esc(l.nome)}</option>`)].join('');
+  abrirForm(`
+    <h2>${novo?'Novo plantão':'Editar plantão'}</h2>
+    <label>Nome</label><input id="f_nome" value="${esc(p.nome)}" placeholder="Ex.: Plantão noturno">
+    <label>Local</label><select id="f_local" onchange="localEscolhido()">${locs}</select>
+    <label>Cor</label><div class="cores" id="f_cores">${swatches(p.cor)}</div><input type="hidden" id="f_cor" value="${p.cor}">
+    <label>Valor (R$)</label><input id="f_valor" inputmode="decimal" value="${p.valor}">
+    <label>Início</label><input id="f_ini" type="datetime-local" value="${p.inicio}">
+    <label>Fim</label><input id="f_fim" type="datetime-local" value="${p.fim}">
+    <label>Data do pagamento</label><input id="f_dpag" type="date" value="${p.dataPagamento||''}">
+    <label class="check"><input type="checkbox" id="f_pago" ${p.pago?'checked':''}> Marcar como pago</label>
+    ${novo?`<label>Repetir semanalmente (semanas extras)</label><input id="f_rep" type="number" min="0" max="52" value="0">`:''}
+    <label>Observações</label><textarea id="f_obs" rows="3">${esc(p.obs)}</textarea>
+    <div class="acoes">
+      ${novo?'':`<button class="btn danger" onclick="excluirPlantao('${p.id}')">Excluir</button>`}
+      <div class="direita">
+        <button class="btn" onclick="fechar()">Cancelar</button>
+        <button class="btn primary" onclick="salvarPlantao('${novo?'':p.id}')">Salvar</button>
+      </div>
+    </div>`);
+}
+
+function localEscolhido(){
+  const l=local(document.getElementById('f_local').value);
+  if(!l)return;
+  escolherCor(l.cor);
+  document.getElementById('f_valor').value=l.valor||'';
+}
+
+function salvarPlantao(id){
+  const g=x=>document.getElementById(x);
+  const ini=g('f_ini').value, fim=g('f_fim').value;
+  if(!ini||!fim){alert('Preencha início e fim.');return;}
+  if(parseDT(fim)<=parseDT(ini)){alert('O fim precisa ser depois do início.');return;}
+  const dados={
+    nome:g('f_nome').value.trim(),
+    localId:g('f_local').value||null,
+    cor:g('f_cor').value,
+    valor:parseFloat(String(g('f_valor').value).replace(',','.'))||0,
+    inicio:ini,fim:fim,
+    pago:g('f_pago').checked,
+    dataPagamento:g('f_dpag').value,
+    obs:g('f_obs').value.trim()
+  };
+  let itens=[];
+  if(id){
+    const p=db.plantoes.find(x=>x.id===id);
+    Object.assign(p,dados);
+    itens=[{c:'plantoes',obj:p}];
+  }else{
+    const n=Math.max(0,parseInt(g('f_rep').value)||0);
+    for(let k=0;k<=n;k++){
+      const obj={id:uid(),...dados,
+        inicio:addDias(ini,7*k),
+        fim:addDias(fim,7*k),
+        dataPagamento:addDiasISO(dados.dataPagamento,7*k)};
+      db.plantoes.push(obj);
+      itens.push({c:'plantoes',obj});
+    }
+  }
+  gravarSeguro(itens);
+  fechar();render();
+}
+
+function excluirPlantao(id){
+  if(!confirm('Excluir este plantão?'))return;
+  db.plantoes=db.plantoes.filter(p=>p.id!==id);
+  fs.collection('users').doc(usuario.uid).collection('plantoes').doc(id).delete()
+    .catch(e=>alert('Não consegui excluir na nuvem: '+e.message));
+  fechar();render();
+}
+
+/* ============ LOCAIS ============ */
+function editarLocal(id){
+  const l=id?local(id):{id:'',nome:'',cor:CORES[0],valor:''};
+  abrirForm(`
+    <h2>${id?'Editar local':'Novo local'}</h2>
+    <label>Nome do local</label><input id="l_nome" value="${esc(l.nome)}" placeholder="Ex.: UPA Caxangá">
+    <label>Cor</label><div class="cores" id="f_cores">${swatches(l.cor)}</div><input type="hidden" id="f_cor" value="${l.cor}">
+    <label>Valor padrão do plantão (R$)</label><input id="l_valor" inputmode="decimal" value="${l.valor}">
+    <div class="acoes">
+      ${id?`<button class="btn danger" onclick="excluirLocal('${id}')">Excluir</button>`:''}
+      <div class="direita">
+        <button class="btn" onclick="fechar()">Cancelar</button>
+        <button class="btn primary" onclick="salvarLocal('${id||''}')">Salvar</button>
+      </div>
+    </div>`);
+}
+
+function salvarLocal(id){
+  const nome=document.getElementById('l_nome').value.trim();
+  if(!nome){alert('Dê um nome ao local.');return;}
+  const dados={
+    nome,
+    cor:document.getElementById('f_cor').value,
+    valor:parseFloat(String(document.getElementById('l_valor').value).replace(',','.'))||0
+  };
+  let obj;
+  if(id){obj=local(id);Object.assign(obj,dados);}
+  else{obj={id:uid(),...dados};db.locais.push(obj);}
+  gravarSeguro([{c:'locais',obj}]);
+  fechar();render();
+}
+
+function excluirLocal(id){
+  if(!confirm('Excluir este local? Os plantões dele continuam salvos, mas sem local.'))return;
+  db.locais=db.locais.filter(l=>l.id!==id);
+  const afetados=db.plantoes.filter(p=>p.localId===id);
+  afetados.forEach(p=>p.localId=null);
+  const b=fs.batch();
+  b.delete(fs.collection('users').doc(usuario.uid).collection('locais').doc(id));
+  afetados.forEach(p=>b.set(colecao('plantoes').doc(p.id),stripId(p)));
+  b.commit().catch(e=>alert('Não consegui excluir na nuvem: '+e.message));
+  fechar();render();
+}
+function stripId(p){const {id,...r}=p;return r;}
+
+/* ============ BACKUP ============ */
+function exportar(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='backup-marca-plantao-'+iso(new Date())+'.json';
+  a.click();
+}
+function importar(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    let d;
+    try{d=JSON.parse(r.result);}catch(e){d=null;}
+    if(!d||!Array.isArray(d.plantoes)||!Array.isArray(d.locais)){alert('Arquivo inválido.');return;}
+    if(!confirm('Substituir TODOS os seus dados atuais pelo backup?'))return;
+    try{
+      await apagarColecao('plantoes');
+      await apagarColecao('locais');
+      await gravar([
+        ...d.locais.map(obj=>({c:'locais',obj})),
+        ...d.plantoes.map(obj=>({c:'plantoes',obj}))
+      ]);
+      await carregarDados();
+      render();
+      alert('Backup restaurado.');
+    }catch(e){alert('Erro ao restaurar: '+e.message);}
+  };
+  r.readAsText(f);
+}
+async function apagarTudo(){
+  if(!confirm('Apagar TODOS os seus plantões e locais? Isso não pode ser desfeito.'))return;
+  try{
+    await apagarColecao('plantoes');
+    await apagarColecao('locais');
+    db={locais:[],plantoes:[]};
+    render();
+  }catch(e){alert('Erro ao apagar: '+e.message);}
+}
+
+render();
+</script>
+</body>
+</html>
