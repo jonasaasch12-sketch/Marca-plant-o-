@@ -293,12 +293,14 @@ function vCalendario(){
   const dias=new Date(ano,m+1,0).getDate();
   const hoje=iso(new Date());
   let h=`<div class="mesnav"><button onclick="mudaMes(-1)">‹</button><strong>${MESES[m]} ${ano}</strong><button onclick="mudaMes(1)">›</button></div>`;
+  h+=`<div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn${modoVarios?' primary':''}" style="flex:1" onclick="toggleModoVarios()">${modoVarios?'Selecionando vários dias ✔':'Selecionar vários dias'}</button>${modoVarios&&diasMulti.size?'<button class="btn" onclick="limparDias()">Limpar</button>':''}</div>`;
   h+='<div class="semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div><div class="grid">';
   for(let i=0;i<vazios;i++)h+='<div></div>';
   for(let d=1;d<=dias;d++){
     const k=`${ano}-${p2(m+1)}-${p2(d)}`;
     const pts=db.plantoes.filter(p=>diaDe(p)===k).slice(0,3).map(p=>`<i style="background:${corDe(p)}"></i>`).join('');
-    h+=`<button class="dia${k===hoje?' hoje':''}${k===diaSel?' sel':''}" onclick="selDia('${k}')">${d}<span class="dots">${pts}</span></button>`;
+    const marcado=modoVarios?diasMulti.has(k):k===diaSel;
+    h+=`<button class="dia${k===hoje?' hoje':''}${marcado?' sel':''}" onclick="clicouDia('${k}')">${d}<span class="dots">${pts}</span></button>`;
   }
   h+='</div>';
   const lista=db.plantoes.filter(p=>diaDe(p)===diaSel).sort((a,b)=>a.inicio.localeCompare(b.inicio));
@@ -844,9 +846,31 @@ function salvarModelo(id){
   gravarSeguro([{c:'modelos',obj}]);
   fechar();render();
 }
+let modoVarios=false;
+let diasMulti=new Set();
+function alvosDias(){
+  return modoVarios&&diasMulti.size?[...diasMulti].sort():[diaSel];
+}
+function clicouDia(k){
+  if(modoVarios){
+    if(diasMulti.has(k))diasMulti.delete(k);else diasMulti.add(k);
+    diaSel=k;
+    render();
+  }else selDia(k);
+}
+function toggleModoVarios(){
+  modoVarios=!modoVarios;
+  diasMulti=new Set(modoVarios?[diaSel]:[]);
+  render();
+}
+function limparDias(){
+  diasMulti=new Set();
+  render();
+}
 function blocoModelosDia(){
   const modelos=db.modelos||[];
-  let h=`<h3 class="sub">Plantões para ${dataBR(diaSel+'T00:00')}</h3>`;
+  const alvos=alvosDias();
+  let h=`<h3 class="sub">Plantões para ${alvos.length>1?alvos.length+' dias selecionados':dataBR(alvos[0]+'T00:00')}</h3>`;
   if(!modelos.length)return h+'<p class="vazio">Você ainda não cadastrou plantões. Crie em Cadastros, dentro de um local.</p>';
   const grupos=[...db.locais.map(l=>({id:l.id,nome:l.nome,cor:l.cor})),{id:null,nome:'Sem local',cor:'#6a7677'}];
   grupos.forEach(g=>{
@@ -864,16 +888,21 @@ function blocoModelosDia(){
 function criarModeloNoDia(id){
   const m=(db.modelos||[]).find(x=>x.id===id);
   if(!m)return;
-  const ini=diaSel+'T'+m.hini;
-  let fim=diaSel+'T'+m.hfim;
-  if(parseDT(fim)<=parseDT(ini))fim=addDias(fim,1);
-  const obj={id:uid(),nome:m.nome,localId:m.localId||null,cor:m.cor,valor:m.valor||0,
-    inicio:ini,fim,pago:false,dataPagamento:'',obs:''};
-  db.plantoes.push(obj);
-  gravarSeguro([{c:'plantoes',obj}]);
+  const itens=alvosDias().map(dia=>{
+    const ini=dia+'T'+m.hini;
+    let fim=dia+'T'+m.hfim;
+    if(parseDT(fim)<=parseDT(ini))fim=addDias(fim,1);
+    return {id:uid(),nome:m.nome,localId:m.localId||null,cor:m.cor,valor:m.valor||0,
+      inicio:ini,fim,pago:false,dataPagamento:'',obs:''};
+  });
+  itens.forEach(o=>db.plantoes.push(o));
+  gravarSeguro(itens.map(obj=>({c:'plantoes',obj})));
+  diaSel=itens[0].inicio.split('T')[0];
+  modoVarios=false;
+  diasMulti=new Set();
   aba='cal';
   render();
-  mostrarAviso('Plantão criado com sucesso.');
+  mostrarAviso(itens.length>1?`${itens.length} plantões criados com sucesso.`:'Plantão criado com sucesso.');
 }
 function mostrarAviso(texto){
   let t=document.getElementById('toast');
