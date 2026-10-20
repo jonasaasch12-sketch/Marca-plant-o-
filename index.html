@@ -67,6 +67,8 @@ input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);borde
 .sw-del{background:var(--no)}
 #toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-150%);background:var(--ok);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;transition:transform .25s;max-width:90%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.25)}
 #toast.on{transform:translateX(-50%) translateY(0)}
+.item-modelo{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.grupo-local{font-weight:700;margin:14px 0 6px;padding-left:8px;border-left:4px solid var(--primary)}
 </style>
 </head>
 <body>
@@ -304,6 +306,7 @@ function vCalendario(){
   const nomeDia=new Date(y,mm-1,dd).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   h+=`<h3 class="sub">${nomeDia}</h3>`;
   h+=lista.length?lista.map(p=>cardPlantao(p,false)).join(''):'<p class="vazio">Nenhum plantão neste dia.</p>';
+  h+=blocoModelosDia();
   h+=`<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="novoPlantao()">+ Este dia</button><button class="btn primary" style="flex:1" onclick="abrirVarios()">+ Vários dias</button></div>`;
   return h;
 }
@@ -325,31 +328,34 @@ function vPagamentos(){
   return h;
 }
 
+function itemModelo(m){
+  return `<div class="item-modelo" onclick="editarModelo('${m.id}')" style="border-left:4px solid ${m.cor}">
+    <span><b>${esc(m.nome)}</b><br><small class="muted">${m.hini} – ${m.hfim}</small></span>
+    <span class="valor">${dinheiro(m.valor)}</span></div>`;
+}
 function vLocais(){
   const modelos=db.modelos||[];
-  let h='<h3 class="sub" style="margin-top:0">Modelos de plantão</h3>';
-  h+='<button class="btn primary" style="width:100%;margin-bottom:10px" onclick="editarModelo()">+ Novo modelo</button>';
-  if(!modelos.length)h+='<p class="vazio">Crie modelos como "Clínica médica" ou "Pediatria", com local, valor e horário. Depois é só usar quando quiser.</p>';
-  h+=`<p class="muted" style="margin:0 0 8px">Dia selecionado: <b>${dataBR(diaSel+'T00:00')}</b></p>`;
-  h+=modelos.map(m=>`<div class="card" style="border-left:6px solid ${m.cor}" onclick="editarModelo('${m.id}')">
-    <div class="linha"><span class="nome" style="margin:0">${esc(m.nome)}</span><span class="valor">${dinheiro(m.valor)}</span></div>
-    <div class="muted" style="margin-top:4px">📍 ${esc(nomeLocal(m.localId))} · ${m.hini} – ${m.hfim}</div>
-    <div class="linha" style="margin-top:8px"><span class="muted">Toque para lançar no dia</span>
-    <button class="pill no" onclick="event.stopPropagation();criarModeloNoDia('${m.id}')">Criar como Não Pago</button></div>
-  </div>`).join('');
-  h+='<h3 class="sub">Locais</h3>';
-  h+='<button class="btn" style="width:100%;margin-bottom:10px" onclick="editarLocal()">+ Novo local</button>';
-  if(!db.locais.length)h+='<p class="vazio">Locais agrupam seus plantões (ex.: Hospital Tricentenário).</p>';
+  let h='<button class="btn primary" style="width:100%;margin-bottom:8px" onclick="editarLocal()">+ Novo local</button>';
+  h+='<button class="btn" style="width:100%;margin-bottom:12px" onclick="abrirResumo(\'todos\')">Resumo geral para nota</button>';
+  if(!db.locais.length)h+='<p class="vazio">Cadastre um local (ex.: Hospital Tricentenário) e depois crie os plantões dentro dele.</p>';
   h+=db.locais.map(l=>{
     const ps=db.plantoes.filter(p=>p.localId===l.id);
     const tot=ps.reduce((s,p)=>s+Number(p.valor||0),0);
-    return `<div class="card" style="border-left:6px solid ${l.cor}" onclick="editarLocal('${l.id}')">
-      <div class="nome" style="margin:0">${esc(l.nome)}</div>
-      <div class="linha" style="margin-top:8px"><span class="muted">${ps.length} ${ps.length===1?'plantão':'plantões'} · ${dinheiro(tot)} no total</span>
-      <button class="pill ok" style="background:var(--primary)" onclick="event.stopPropagation();abrirResumo('${l.id}')">Resumo / nota</button></div>
+    const ms=modelos.filter(m=>m.localId===l.id);
+    return `<div class="card" style="border-left:6px solid ${l.cor};cursor:default">
+      <div class="linha"><span class="nome" style="margin:0;cursor:pointer" onclick="editarLocal('${l.id}')">${esc(l.nome)}</span>
+      <button class="pill ok" style="background:var(--primary)" onclick="abrirResumo('${l.id}')">Resumo / nota</button></div>
+      <div class="muted" style="margin-top:4px">${ps.length} ${ps.length===1?'plantão lançado':'plantões lançados'} · ${dinheiro(tot)} no total</div>
+      <div style="margin-top:10px;font-weight:600">Plantões cadastrados</div>
+      ${ms.length?ms.map(itemModelo).join(''):'<p class="muted" style="margin:6px 0">Nenhum plantão neste local ainda.</p>'}
+      <button class="btn" style="width:100%;margin-top:8px" onclick="editarModelo(null,'${l.id}')">+ Plantão em ${esc(l.nome)}</button>
     </div>`;
   }).join('');
-  h+='<button class="btn" style="width:100%;margin-top:6px" onclick="abrirResumo(\'todos\')">Resumo geral para nota</button>';
+  const semLocal=modelos.filter(m=>!m.localId);
+  if(semLocal.length){
+    h+=`<div class="card" style="cursor:default"><div style="font-weight:600">Sem local</div>${semLocal.map(itemModelo).join('')}</div>`;
+  }
+  h+='<button class="btn" style="width:100%;margin-top:6px" onclick="editarModelo()">+ Plantão sem local</button>';
   return h;
 }
 
@@ -801,8 +807,8 @@ function usarModeloNoDia(id){
   aba='cal';
   formPlantao(base,true);
 }
-function editarModelo(id){
-  const m=id?(db.modelos||[]).find(x=>x.id===id):{id:'',nome:'',localId:'',cor:CORES[4],valor:'',hini:'07:00',hfim:'19:00'};
+function editarModelo(id,localPreset){
+  const m=id?(db.modelos||[]).find(x=>x.id===id):{id:'',nome:'',localId:localPreset||'',cor:CORES[4],valor:'',hini:'07:00',hfim:'19:00'};
   const locs=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}" ${l.id===m.localId?'selected':''}>${esc(l.nome)}</option>`)].join('');
   abrirForm(`
     <h2>${id?'Editar modelo':'Novo modelo de plantão'}</h2>
@@ -837,6 +843,23 @@ function salvarModelo(id){
   else{obj={id:uid(),...dados};db.modelos=db.modelos||[];db.modelos.push(obj);}
   gravarSeguro([{c:'modelos',obj}]);
   fechar();render();
+}
+function blocoModelosDia(){
+  const modelos=db.modelos||[];
+  let h=`<h3 class="sub">Plantões para ${dataBR(diaSel+'T00:00')}</h3>`;
+  if(!modelos.length)return h+'<p class="vazio">Você ainda não cadastrou plantões. Crie em Cadastros, dentro de um local.</p>';
+  const grupos=[...db.locais.map(l=>({id:l.id,nome:l.nome,cor:l.cor})),{id:null,nome:'Sem local',cor:'#6a7677'}];
+  grupos.forEach(g=>{
+    const ms=modelos.filter(m=>(m.localId||null)===g.id);
+    if(!ms.length)return;
+    h+=`<div class="grupo-local" style="border-left-color:${g.cor}">${esc(g.nome)}</div>`;
+    h+=ms.map(m=>`<div class="card" style="border-left:6px solid ${m.cor};cursor:default">
+      <div class="linha"><span class="nome" style="margin:0">${esc(m.nome)}</span><span class="valor">${dinheiro(m.valor)}</span></div>
+      <div class="linha" style="margin-top:6px"><span class="muted">${m.hini} – ${m.hfim}</span>
+      <button class="pill no" onclick="criarModeloNoDia('${m.id}')">Criar como Não Pago</button></div>
+    </div>`).join('');
+  });
+  return h;
 }
 function criarModeloNoDia(id){
   const m=(db.modelos||[]).find(x=>x.id===id);
