@@ -154,9 +154,11 @@ function msgErro(e){
     'auth/email-already-in-use':'Este e-mail já tem conta. Tente entrar.',
     'auth/weak-password':'Use uma senha com pelo menos 6 caracteres.',
     'auth/too-many-requests':'Muitas tentativas. Aguarde e tente de novo.',
-    'auth/network-request-failed':'Sem conexão com a internet.'
+    'auth/network-request-failed':'Sem conexão com a internet.',
+    'auth/operation-not-allowed':'O login por e-mail e senha não está ativado no Firebase (Authentication → Sign-in method).',
+    'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase (Authentication → Configurações → Domínios autorizados).'
   };
-  return m[e.code]||'Não foi possível concluir. Tente novamente.';
+  return m[e.code]||('Erro: '+(e.code||e.message||'desconhecido'));
 }
 function lerLogin(){return [document.getElementById('a_email').value.trim(),document.getElementById('a_senha').value];}
 async function entrar(){
