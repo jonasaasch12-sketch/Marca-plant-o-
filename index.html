@@ -403,19 +403,19 @@ function novoPlantao(){
 function editarPlantao(id){formPlantao(db.plantoes.find(p=>p.id===id),false);}
 
 function formPlantao(p,novo){
-  const locs=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}" ${l.id===p.localId?'selected':''}>${esc(l.nome)}</option>`)].join('');
   abrirForm(`
     <h2>${novo?'Novo plantão':'Editar plantão'}</h2>
     ${novo?`<label>Usar um modelo</label><select id="f_modelo" onchange="aplicarModelo()"><option value="">Nenhum</option>${opcoesModelos()}</select>`:''}
     <label>Nome</label><input id="f_nome" value="${esc(p.nome)}" placeholder="Ex.: Plantão noturno">
-    <label>Local</label><select id="f_local" onchange="localEscolhido()">${locs}</select>
+    <label>Local</label><select id="f_local" onchange="localEscolhido(this)">${opcoesLocal(p.localId)}</select>
     <label>Cor</label><div class="cores" id="f_cores">${swatches(p.cor)}</div><input type="hidden" id="f_cor" value="${p.cor}">
     <label>Valor (R$)</label><input id="f_valor" inputmode="decimal" value="${p.valor}">
     <label>Início</label><input id="f_ini" type="datetime-local" value="${p.inicio}">
     <label>Fim</label><input id="f_fim" type="datetime-local" value="${p.fim}">
     <label>Data do pagamento</label><input id="f_dpag" type="date" value="${p.dataPagamento||''}">
     <label class="check"><input type="checkbox" id="f_pago" ${p.pago?'checked':''}> Marcar como pago</label>
-    ${novo?`<label>Repetir semanalmente (semanas extras)</label><input id="f_rep" type="number" min="0" max="52" value="0">`:''}
+    ${novo?`<label>Repetir semanalmente (semanas extras)</label><input id="f_rep" type="number" min="0" max="52" value="0">
+    <label class="check"><input type="checkbox" id="f_salvarmod"> Salvar como plantão cadastrado (para usar de novo)</label>`:''}
     <label>Observações</label><textarea id="f_obs" rows="3">${esc(p.obs)}</textarea>
     <div class="acoes">
       ${novo?'':`<button class="btn danger" onclick="excluirPlantao('${p.id}')">Excluir</button>`}
@@ -426,8 +426,24 @@ function formPlantao(p,novo){
     </div>`);
 }
 
-function localEscolhido(){
-  const l=local(document.getElementById('f_local').value);
+function opcoesLocal(sel){
+  return ['<option value="">Nenhum</option>',
+    ...db.locais.map(l=>`<option value="${l.id}" ${l.id===sel?'selected':''}>${esc(l.nome)}</option>`),
+    '<option value="__novo">+ Criar novo local…</option>'].join('');
+}
+function localEscolhido(el){
+  el=el||document.getElementById('f_local');
+  if(el.value==='__novo'){
+    const nome=(prompt('Nome do novo local (ex.: Hospital Tricentenário):')||'').trim();
+    if(!nome){el.value='';return;}
+    const usadas=db.locais.map(l=>l.cor);
+    const obj={id:uid(),nome,cor:CORES.find(c=>!usadas.includes(c))||CORES[0]};
+    db.locais.push(obj);
+    gravarSeguro([{c:'locais',obj}]);
+    el.innerHTML=opcoesLocal(obj.id);
+    el.value=obj.id;
+  }
+  const l=local(el.value);
   if(!l)return;
   escolherCor(l.cor);
 }
@@ -453,6 +469,7 @@ function salvarPlantao(id){
     Object.assign(p,dados);
     itens=[{c:'plantoes',obj:p}];
   }else{
+    if(g('f_salvarmod').checked&&!dados.nome){alert('Dê um nome ao plantão para salvá-lo como cadastrado.');return;}
     const n=Math.max(0,parseInt(g('f_rep').value)||0);
     for(let k=0;k<=n;k++){
       const obj={id:uid(),...dados,
@@ -462,9 +479,16 @@ function salvarPlantao(id){
       db.plantoes.push(obj);
       itens.push({c:'plantoes',obj});
     }
+    if(g('f_salvarmod').checked){
+      const mod={id:uid(),nome:dados.nome,localId:dados.localId,cor:dados.cor,valor:dados.valor,
+        hini:ini.split('T')[1].slice(0,5),hfim:fim.split('T')[1].slice(0,5)};
+      db.modelos=db.modelos||[];db.modelos.push(mod);
+      itens.push({c:'modelos',obj:mod});
+    }
   }
   gravarSeguro(itens);
   fechar();render();
+  if(!id)mostrarAviso(itens.some(i=>i.c==='modelos')?'Plantão criado e cadastrado com sucesso.':'Plantão criado com sucesso.');
 }
 
 function excluirPlantao(id){
@@ -810,12 +834,13 @@ function usarModeloNoDia(id){
   formPlantao(base,true);
 }
 function editarModelo(id,localPreset){
-  const m=id?(db.modelos||[]).find(x=>x.id===id):{id:'',nome:'',localId:localPreset||'',cor:CORES[4],valor:'',hini:'07:00',hfim:'19:00'};
-  const locs=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}" ${l.id===m.localId?'selected':''}>${esc(l.nome)}</option>`)].join('');
+  const lp=localPreset?local(localPreset):null;
+  const m=id?(db.modelos||[]).find(x=>x.id===id):{id:'',nome:'',localId:localPreset||'',cor:lp?lp.cor:CORES[4],valor:'',hini:'07:00',hfim:'19:00'};
   abrirForm(`
-    <h2>${id?'Editar modelo':'Novo modelo de plantão'}</h2>
-    <label>Nome do plantão</label><input id="m_nome" value="${esc(m.nome)}" placeholder="Ex.: Clínica médica">
-    <label>Local</label><select id="m_local">${locs}</select>
+    <h2>${id?'Editar plantão cadastrado':'Cadastrar novo plantão'}</h2>
+    <p class="muted" style="margin:0 0 6px">Fica salvo para você usar sempre que quiser. Ex.: Hospital Tricentenário → Emergência pediátrica.</p>
+    <label>Local</label><select id="m_local" onchange="localEscolhido(this)">${opcoesLocal(m.localId)}</select>
+    <label>Nome do plantão</label><input id="m_nome" value="${esc(m.nome)}" placeholder="Ex.: Emergência pediátrica">
     <label>Cor</label><div class="cores" id="f_cores">${swatches(m.cor)}</div><input type="hidden" id="f_cor" value="${m.cor}">
     <label>Valor (R$)</label><input id="m_valor" inputmode="decimal" value="${m.valor||''}">
     <label>Horário de início</label><input id="m_ini" type="time" value="${m.hini}">
@@ -845,6 +870,7 @@ function salvarModelo(id){
   else{obj={id:uid(),...dados};db.modelos=db.modelos||[];db.modelos.push(obj);}
   gravarSeguro([{c:'modelos',obj}]);
   fechar();render();
+  mostrarAviso(id?'Plantão cadastrado atualizado.':'Plantão cadastrado com sucesso.');
 }
 let modoVarios=false;
 let diasMulti=new Set();
@@ -871,19 +897,20 @@ function blocoModelosDia(){
   const modelos=db.modelos||[];
   const alvos=alvosDias();
   let h=`<h3 class="sub">Plantões para ${alvos.length>1?alvos.length+' dias selecionados':dataBR(alvos[0]+'T00:00')}</h3>`;
-  if(!modelos.length)return h+'<p class="vazio">Você ainda não cadastrou plantões. Crie em Cadastros, dentro de um local.</p>';
+  const botaoCad='<button class="btn primary" style="width:100%;margin-bottom:10px" onclick="editarModelo()">+ Cadastrar novo plantão</button>';
+  if(!modelos.length)return h+'<p class="vazio">Você ainda não cadastrou plantões. Cadastre os seus (ex.: Hospital Tricentenário → Pediatria) para criar com um toque.</p>'+botaoCad;
   const grupos=[...db.locais.map(l=>({id:l.id,nome:l.nome,cor:l.cor})),{id:null,nome:'Sem local',cor:'#6a7677'}];
   grupos.forEach(g=>{
     const ms=modelos.filter(m=>(m.localId||null)===g.id);
     if(!ms.length)return;
     h+=`<div class="grupo-local" style="border-left-color:${g.cor}">${esc(g.nome)}</div>`;
     h+=ms.map(m=>`<div class="card" style="border-left:6px solid ${m.cor};cursor:default">
-      <div class="linha"><span class="nome" style="margin:0">${esc(m.nome)}</span><span class="valor">${dinheiro(m.valor)}</span></div>
+      <div class="linha"><span class="nome" style="margin:0;cursor:pointer" onclick="editarModelo('${m.id}')">${esc(m.nome)} <small class="muted">✏️</small></span><span class="valor">${dinheiro(m.valor)}</span></div>
       <div class="linha" style="margin-top:6px"><span class="muted">${m.hini} – ${m.hfim}</span>
       <button class="pill no" onclick="criarModeloNoDia('${m.id}')">Criar como Não Pago</button></div>
     </div>`).join('');
   });
-  return h;
+  return h+botaoCad;
 }
 function criarModeloNoDia(id){
   const m=(db.modelos||[]).find(x=>x.id===id);
