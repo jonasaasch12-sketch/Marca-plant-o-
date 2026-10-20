@@ -105,7 +105,8 @@ let filtroPag='todos';
 function colecao(nome){return fs.collection('users').doc(usuario.uid).collection(nome);}
 
 async function carregarDados(){
-  const [l,p]=await Promise.all([colecao('locais').get(),colecao('plantoes').get()]);
+  const tempo=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado. Confirme no Firebase que o Firestore Database foi criado e que as regras foram publicadas.')),10000));
+  const [l,p]=await Promise.race([Promise.all([colecao('locais').get(),colecao('plantoes').get()]),tempo]);
   db.locais=l.docs.map(d=>({...d.data(),id:d.id}));
   db.plantoes=p.docs.map(d=>({...d.data(),id:d.id}));
 }
@@ -137,7 +138,11 @@ async function apagarColecao(nome){
 auth.onAuthStateChanged(async u=>{
   usuario=u;
   if(u){
-    try{await carregarDados();}catch(e){alert('Erro ao carregar seus dados: '+e.message);}
+    try{await carregarDados();}
+    catch(e){
+      db={locais:[],plantoes:[]};
+      alert('Erro ao carregar seus dados: '+e.message);
+    }
   }else{
     db={locais:[],plantoes:[]};
   }
