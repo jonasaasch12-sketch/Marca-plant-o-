@@ -59,6 +59,12 @@ input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);borde
 .acoes{display:flex;gap:8px;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
 .acoes .direita{display:flex;gap:8px;margin-left:auto}
 .erro{color:var(--no);font-size:14px;min-height:20px;margin:8px 0 0}
+.swipe{position:relative;margin-bottom:10px;border-radius:12px;overflow:hidden}
+.swipe .card{margin:0;position:relative;z-index:1;touch-action:pan-y;background:var(--card);transition:transform .2s}
+.acoes-swipe{position:absolute;right:0;top:0;bottom:0;display:flex;width:170px}
+.acoes-swipe button{flex:1;border:0;color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+.sw-pago{background:var(--ok)}
+.sw-del{background:var(--no)}
 </style>
 </head>
 <body>
@@ -261,12 +267,18 @@ function vLogin(){
 
 function cardPlantao(p,comData){
   const cruza=diaDe(p)!==p.fim.split('T')[0];
-  return `<div class="card" style="border-left:6px solid ${corDe(p)}" onclick="editarPlantao('${p.id}')">
-    ${comData?`<div class="muted" style="margin-bottom:4px">${dataBR(p.inicio)}</div>`:''}
-    <div class="linha"><span class="hora">${hora(p.inicio)} – ${hora(p.fim)}${cruza?' <small class="muted">(+1 dia)</small>':''}</span><span class="valor">${dinheiro(p.valor)}</span></div>
-    <div class="nome">${esc(p.nome||'Sem nome')}</div>
-    <div class="linha"><span class="muted">📍 ${esc(nomeLocal(p.localId))}</span>
-    <button class="pill ${p.pago?'ok':'no'}" onclick="event.stopPropagation();togglePago('${p.id}')">${p.pago?'Pago':'Não pago'}</button></div>
+  return `<div class="swipe">
+    <div class="acoes-swipe">
+      <button class="sw-pago" onclick="togglePago('${p.id}')">${p.pago?'Não pago':'Marcar pago'}</button>
+      <button class="sw-del" onclick="excluirPlantao('${p.id}')">Excluir</button>
+    </div>
+    <div class="card swipe-card" data-id="${p.id}" style="border-left:6px solid ${corDe(p)}" onclick="cardClick('${p.id}')">
+      ${comData?`<div class="muted" style="margin-bottom:4px">${dataBR(p.inicio)}</div>`:''}
+      <div class="linha"><span class="hora">${hora(p.inicio)} – ${hora(p.fim)}${cruza?' <small class="muted">(+1 dia)</small>':''}</span><span class="valor">${dinheiro(p.valor)}</span></div>
+      <div class="nome">${esc(p.nome||'Sem nome')}</div>
+      <div class="linha"><span class="muted">📍 ${esc(nomeLocal(p.localId))}</span>
+      <button class="pill ${p.pago?'ok':'no'}" onclick="event.stopPropagation();togglePago('${p.id}')">${p.pago?'Pago':'Não pago'}</button></div>
+    </div>
   </div>`;
 }
 
@@ -289,7 +301,7 @@ function vCalendario(){
   const nomeDia=new Date(y,mm-1,dd).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   h+=`<h3 class="sub">${nomeDia}</h3>`;
   h+=lista.length?lista.map(p=>cardPlantao(p,false)).join(''):'<p class="vazio">Nenhum plantão neste dia.</p>';
-  h+=`<button class="btn" style="width:100%" onclick="novoPlantao()">+ Adicionar plantão neste dia</button>`;
+  h+=`<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="novoPlantao()">+ Este dia</button><button class="btn primary" style="flex:1" onclick="abrirVarios()">+ Vários dias</button></div>`;
   return h;
 }
 
@@ -515,6 +527,131 @@ async function apagarTudo(){
     db={locais:[],plantoes:[]};
     render();
   }catch(e){alert('Erro ao apagar: '+e.message);}
+}
+
+/* ============ SWIPE NOS PLANTÕES ============ */
+const ABRE=170;
+let sw=null, swipeMoveu=false;
+const conteudoEl=document.getElementById('conteudo');
+conteudoEl.addEventListener('pointerdown',e=>{
+  const card=e.target.closest('.swipe-card');
+  if(!card)return;
+  sw={card,x:e.clientX,y:e.clientY,dx:0,base:card.dataset.open==='1'?-ABRE:0,moved:false};
+});
+conteudoEl.addEventListener('pointermove',e=>{
+  if(!sw)return;
+  const dx=e.clientX-sw.x, dy=e.clientY-sw.y;
+  if(!sw.moved){
+    if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>8){sw=null;return;}
+    if(Math.abs(dx)<8)return;
+    sw.moved=true;
+    sw.card.style.transition='none';
+  }
+  sw.dx=dx;
+  const pos=Math.max(-ABRE,Math.min(0,sw.base+dx));
+  sw.card.style.transform=`translateX(${pos}px)`;
+});
+function fimSwipe(){
+  if(!sw)return;
+  const {card,base,dx,moved}=sw;
+  sw=null;
+  if(!moved)return;
+  swipeMoveu=true;
+  setTimeout(()=>swipeMoveu=false,300);
+  const abrir=(base+dx)<-ABRE/2;
+  card.style.transition='transform .2s';
+  card.dataset.open=abrir?'1':'0';
+  card.style.transform=abrir?`translateX(-${ABRE}px)`:'translateX(0)';
+}
+conteudoEl.addEventListener('pointerup',fimSwipe);
+conteudoEl.addEventListener('pointercancel',fimSwipe);
+function fecharSwipe(card){
+  card.style.transition='transform .2s';
+  card.dataset.open='0';
+  card.style.transform='translateX(0)';
+}
+function cardClick(id){
+  if(swipeMoveu)return;
+  const c=document.querySelector(`.swipe-card[data-id="${id}"]`);
+  if(c&&c.dataset.open==='1'){fecharSwipe(c);return;}
+  editarPlantao(id);
+}
+
+/* ============ VÁRIOS PLANTÕES ============ */
+let multiDias=new Set();
+let multiMes=new Date();
+function abrirVarios(){
+  multiDias=new Set([diaSel]);
+  multiMes=new Date(mes.getFullYear(),mes.getMonth(),1);
+  const opts=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`)].join('');
+  abrirForm(`
+    <h2>Vários plantões</h2>
+    <p class="muted" style="margin:0">Toque nos dias em que você trabalha. Cada dia marcado vira um plantão com os dados abaixo.</p>
+    <div class="mesnav" style="margin-top:10px"><button onclick="mudaMesVarios(-1)">‹</button><strong id="v_mes"></strong><button onclick="mudaMesVarios(1)">›</button></div>
+    <div class="semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+    <div class="grid" id="v_grid"></div>
+    <p class="muted" id="v_cont" style="margin:8px 0 0"></p>
+    <label>Nome</label><input id="v_nome" placeholder="Ex.: Plantão noturno">
+    <label>Local</label><select id="v_local" onchange="varLocal()">${opts}</select>
+    <label>Cor</label><div class="cores" id="f_cores">${swatches(CORES[4])}</div><input type="hidden" id="f_cor" value="${CORES[4]}">
+    <label>Valor (R$)</label><input id="v_valor" inputmode="decimal">
+    <label>Horário de início</label><input id="v_ini" type="time" value="07:00">
+    <label>Horário de fim</label><input id="v_fim" type="time" value="19:00">
+    <label>Observações</label><textarea id="v_obs" rows="2"></textarea>
+    <div class="acoes">
+      <button class="btn" onclick="fechar()">Cancelar</button>
+      <button class="btn primary" onclick="salvarVarios()">Salvar</button>
+    </div>`);
+  renderGridVarios();
+}
+function renderGridVarios(){
+  const ano=multiMes.getFullYear(), m=multiMes.getMonth();
+  document.getElementById('v_mes').textContent=`${MESES[m]} ${ano}`;
+  let h='';
+  for(let i=0;i<new Date(ano,m,1).getDay();i++)h+='<div></div>';
+  for(let d=1;d<=new Date(ano,m+1,0).getDate();d++){
+    const k=`${ano}-${p2(m+1)}-${p2(d)}`;
+    h+=`<button class="dia${multiDias.has(k)?' sel':''}" onclick="toggleDiaVarios('${k}')">${d}</button>`;
+  }
+  document.getElementById('v_grid').innerHTML=h;
+  document.getElementById('v_cont').textContent=`${multiDias.size} dia(s) selecionado(s)`;
+}
+function mudaMesVarios(n){
+  multiMes=new Date(multiMes.getFullYear(),multiMes.getMonth()+n,1);
+  renderGridVarios();
+}
+function toggleDiaVarios(k){
+  if(multiDias.has(k))multiDias.delete(k);else multiDias.add(k);
+  renderGridVarios();
+}
+function varLocal(){
+  const l=local(document.getElementById('v_local').value);
+  if(!l)return;
+  escolherCor(l.cor);
+  document.getElementById('v_valor').value=l.valor||'';
+}
+function salvarVarios(){
+  const g=x=>document.getElementById(x).value;
+  if(!multiDias.size){alert('Selecione pelo menos um dia.');return;}
+  const ini=g('v_ini'), fim=g('v_fim');
+  if(!ini||!fim){alert('Preencha os horários.');return;}
+  const valor=parseFloat(String(g('v_valor')).replace(',','.'))||0;
+  const dias=[...multiDias].sort();
+  const itens=[];
+  dias.forEach(k=>{
+    const inicio=k+'T'+ini;
+    let fimDT=k+'T'+fim;
+    if(parseDT(fimDT)<=parseDT(inicio))fimDT=addDias(fimDT,1);
+    const obj={id:uid(),nome:g('v_nome').trim(),localId:g('v_local')||null,cor:g('f_cor'),
+      valor,inicio,fim:fimDT,pago:false,dataPagamento:'',obs:g('v_obs').trim()};
+    db.plantoes.push(obj);
+    itens.push({c:'plantoes',obj});
+  });
+  gravarSeguro(itens);
+  const [yy,mm]=dias[0].split('-');
+  mes=new Date(+yy,+mm-1,1);
+  diaSel=dias[0];
+  fechar();render();
 }
 
 render();
