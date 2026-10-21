@@ -310,7 +310,6 @@ function vCalendario(){
   const nomeDia=new Date(y,mm-1,dd).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   h+=`<h3 class="sub">${nomeDia}</h3>`;
   h+=lista.length?lista.map(p=>cardPlantao(p,false)).join(''):'<p class="vazio">Nenhum plantão neste dia.</p>';
-  h+=blocoModelosDia();
   return h;
 }
 
@@ -406,7 +405,7 @@ function editarPlantao(id){formPlantao(db.plantoes.find(p=>p.id===id),false);}
 function formPlantao(p,novo){
   abrirForm(`
     <h2>${novo?'Novo plantão':'Editar plantão'}</h2>
-    ${novo?`<label>Usar um modelo</label><select id="f_modelo" onchange="aplicarModelo()"><option value="">Nenhum</option>${opcoesModelos()}</select>`:''}
+    ${novo?`<label>Plantão cadastrado</label><select id="f_modelo" onchange="aplicarModelo()"><option value="">Nenhum (preencher abaixo)</option>${opcoesModelos()}</select>`:''}
     <label>Nome</label><input id="f_nome" value="${esc(p.nome)}" placeholder="Ex.: Plantão noturno">
     <label>Local</label><select id="f_local" onchange="localEscolhido(this)">${opcoesLocal(p.localId)}</select>
     <label>Cor</label><div class="cores" id="f_cores">${swatches(p.cor)}</div><input type="hidden" id="f_cor" value="${p.cor}">
@@ -820,7 +819,13 @@ function copiarNota(){
 
 /* ============ MODELOS DE PLANTÃO ============ */
 function opcoesModelos(){
-  return (db.modelos||[]).map(m=>`<option value="${m.id}">${esc(m.nome)}</option>`).join('');
+  const ms=db.modelos||[];
+  const op=m=>`<option value="${m.id}">${esc(m.nome)} · ${m.hini}–${m.hfim} · ${dinheiro(m.valor)}</option>`;
+  const grupos=[...db.locais.map(l=>({id:l.id,nome:l.nome})),{id:null,nome:'Sem local'}];
+  return grupos.map(g=>{
+    const doLocal=ms.filter(m=>(m.localId||null)===g.id);
+    return doLocal.length?`<optgroup label="${esc(g.nome)}">${doLocal.map(op).join('')}</optgroup>`:'';
+  }).join('');
 }
 function aplicarModelo(){
   const m=(db.modelos||[]).find(x=>x.id===document.getElementById('f_modelo').value);
@@ -913,43 +918,6 @@ function toggleModoVarios(){
 function limparDias(){
   diasMulti=new Set();
   render();
-}
-function blocoModelosDia(){
-  const modelos=db.modelos||[];
-  const alvos=alvosDias();
-  let h=`<h3 class="sub">Plantões para ${alvos.length>1?alvos.length+' dias selecionados':dataBR(alvos[0]+'T00:00')}</h3>`;
-  if(!modelos.length)return h+'<p class="vazio">Você ainda não cadastrou plantões. Toque em "+ Cadastrar novo plantão", logo abaixo do calendário (ex.: Hospital Tricentenário → Pediatria).</p>';
-  const grupos=[...db.locais.map(l=>({id:l.id,nome:l.nome,cor:l.cor})),{id:null,nome:'Sem local',cor:'#6a7677'}];
-  grupos.forEach(g=>{
-    const ms=modelos.filter(m=>(m.localId||null)===g.id);
-    if(!ms.length)return;
-    h+=`<div class="grupo-local" style="border-left-color:${g.cor}">${esc(g.nome)}</div>`;
-    h+=ms.map(m=>`<div class="card" style="border-left:6px solid ${m.cor};cursor:default">
-      <div class="linha"><span class="nome" style="margin:0;cursor:pointer" onclick="editarModelo('${m.id}')">${esc(m.nome)} <small class="muted">✏️</small></span><span class="valor">${dinheiro(m.valor)}</span></div>
-      <div class="linha" style="margin-top:6px"><span class="muted">${m.hini} – ${m.hfim}</span>
-      <button class="pill no" onclick="criarModeloNoDia('${m.id}')">Criar como Não Pago</button></div>
-    </div>`).join('');
-  });
-  return h;
-}
-function criarModeloNoDia(id){
-  const m=(db.modelos||[]).find(x=>x.id===id);
-  if(!m)return;
-  const itens=alvosDias().map(dia=>{
-    const ini=dia+'T'+m.hini;
-    let fim=dia+'T'+m.hfim;
-    if(parseDT(fim)<=parseDT(ini))fim=addDias(fim,1);
-    return {id:uid(),nome:m.nome,localId:m.localId||null,cor:m.cor,valor:m.valor||0,
-      inicio:ini,fim,pago:false,dataPagamento:'',obs:''};
-  });
-  itens.forEach(o=>db.plantoes.push(o));
-  gravarSeguro(itens.map(obj=>({c:'plantoes',obj})));
-  diaSel=itens[0].inicio.split('T')[0];
-  modoVarios=false;
-  diasMulti=new Set();
-  aba='cal';
-  render();
-  mostrarAviso(itens.length>1?`${itens.length} plantões criados com sucesso.`:'Plantão criado com sucesso.');
 }
 function mostrarAviso(texto){
   let t=document.getElementById('toast');
