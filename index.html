@@ -734,7 +734,10 @@ function salvarVarios(){
 }
 
 /* ============ RESUMO PARA NOTA FISCAL ============ */
-const CATS={diurno:'Plantões diurnos',noturno:'Plantões noturnos',diurno_fds:'Plantões diurnos FDS',noturno_fds:'Plantões noturnos FDS'};
+const CATS={diurno:'Plantões diurnos semana',noturno:'Plantões noturnos semana',diurno_fds:'Plantões diurnos FDS',noturno_fds:'Plantões noturnos FDS'};
+const ORDEM_CAT=['diurno','noturno','diurno_fds','noturno_fds'];
+// Compara nomes sem acento, maiúsculas ou espaços extras: "Emergência  Pediatrica" = "emergencia pediátrica"
+function chaveNome(n){return (n||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
 
 function classificarPlantao(p){
   const d=parseDT(p.inicio);
@@ -770,11 +773,11 @@ function gerarTextoNota(lista,de,ate){
     const cat=classificarPlantao(p);
     const unit=Number(p.valor||0);
     const nome=(p.nome||'').trim();
-    const chave=cat+'|'+nome.toLowerCase()+'|'+unit;
+    const chave=cat+'|'+chaveNome(nome)+'|'+unit;
     if(!grupos[chave])grupos[chave]={cat,nome,unit,itens:[]};
     grupos[chave].itens.push(p);
   });
-  const linhas=Object.values(grupos).sort((a,b)=>a.itens[0].inicio.localeCompare(b.itens[0].inicio));
+  const linhas=Object.values(grupos).sort((a,b)=>ORDEM_CAT.indexOf(a.cat)-ORDEM_CAT.indexOf(b.cat)||chaveNome(a.nome).localeCompare(chaveNome(b.nome))||a.unit-b.unit);
   const partes=linhas.map(g=>{
     const v=g.itens.reduce((s,p)=>s+Number(p.valor||0),0);
     return `${CATS[g.cat]}${g.nome?', '+g.nome:''}, dias ${textoDatas(g.itens)}, valor unitário ${dinheiro(g.unit)}, valor total ${dinheiro(v)}.`;
