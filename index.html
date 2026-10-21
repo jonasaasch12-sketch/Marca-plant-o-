@@ -133,9 +133,20 @@ input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);borde
 input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
 .check{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;font-weight:500;color:var(--text)}
 .check input{width:20px;height:20px;accent-color:var(--primary)}
-.cores{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
-.cores button{width:34px;height:34px;border-radius:50%;border:3px solid var(--bg);box-shadow:0 0 0 1px var(--line);cursor:pointer}
-.cores button.on{box-shadow:0 0 0 2px var(--text)}
+.cor-nome{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin:0 0 10px}
+.cor-nome i{width:16px;height:16px;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.grade-cores{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:10px}
+.cor{position:relative;aspect-ratio:1;width:100%;border:0;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08),0 2px 6px rgba(16,32,31,.12);transition:transform .1s;padding:0;margin:0;font:inherit;color:#fff}
+.cor:active{transform:scale(.94)}
+.cor svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+.cor.clara{color:#10201f}
+.cor.on{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--text)}
+.cor.on svg{opacity:1}
+.cor.outra{background:conic-gradient(#e11d2e,#facc15,#15803d,#38bdf8,#7c3aed,#ff00ff,#e11d2e)}
+.cor.outra span{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.cor.outra.on span{display:none}
+.cor.outra input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;padding:0;border:0}
+html .dots i{box-shadow:0 0 0 1px rgba(127,127,127,.35)}
 .acoes{display:flex;gap:8px;justify-content:space-between;margin-top:20px;flex-wrap:wrap}
 .acoes .direita{display:flex;gap:8px;margin-left:auto}
 .erro:empty{display:none}
@@ -199,7 +210,17 @@ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 
 /* ============ ESTADO ============ */
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const CORES=['#e53935','#d81b60','#8e24aa','#3949ab','#1e88e5','#00897b','#43a047','#fb8c00','#6d4c41','#546e7a'];
+// Paleta escolhida por diferença de cor (ΔE2000 ≥ 20 entre qualquer par): nenhuma fica parecida com outra.
+const PALETA=[['Vermelho','#e11d2e'],['Laranja','#f97316'],['Amarelo','#facc15'],['Lima','#84cc16'],['Verde','#15803d'],
+  ['Turquesa','#14b8a6'],['Azul-claro','#38bdf8'],['Azul','#007aff'],['Azul-marinho','#172554'],['Roxo','#7c3aed'],
+  ['Magenta','#ff00ff'],['Rosa','#f9a8d4'],['Marrom','#8e5a2e'],['Vinho','#800000'],['Cinza','#9ca3af']];
+const CORES=PALETA.map(c=>c[1]);
+const COR_PADRAO='#007aff';
+// Cores da paleta antiga -> equivalente na nova (só na tela; grava ao editar)
+const COR_ANTIGA={'#e53935':'#e11d2e','#d81b60':'#f9a8d4','#8e24aa':'#7c3aed','#3949ab':'#172554','#1e88e5':'#007aff',
+  '#00897b':'#14b8a6','#43a047':'#15803d','#fb8c00':'#f97316','#6d4c41':'#8e5a2e','#546e7a':'#9ca3af','#16807a':'#14b8a6'};
+function nomeCor(c){const p=PALETA.find(x=>x[1]===String(c).toLowerCase());return p?p[0]:'Personalizada';}
+function corClara(c){const h=String(c).replace('#','');if(h.length<6)return false;const [r,g,b]=[0,2,4].map(i=>parseInt(h.substr(i,2),16));return (0.299*r+0.587*g+0.114*b)>170;}
 
 let db={locais:[],plantoes:[]};
 let usuario=null;
@@ -219,6 +240,7 @@ async function carregarDados(){
   db.locais=l.docs.map(d=>({...d.data(),id:d.id}));
   db.plantoes=p.docs.map(d=>({...d.data(),id:d.id}));
   db.modelos=m.docs.map(d=>({...d.data(),id:d.id}));
+  [...db.locais,...db.plantoes,...db.modelos].forEach(o=>{const n=COR_ANTIGA[String(o.cor||'').toLowerCase()];if(n)o.cor=n;});
 }
 
 // grava uma lista de {c:'plantoes'|'locais', obj}, em lotes de 400
@@ -315,7 +337,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function diaDe(p){return p.inicio.split('T')[0];}
 function local(id){return db.locais.find(l=>l.id===id);}
 function nomeLocal(id){const l=local(id);return l?l.nome:'Sem local';}
-function corDe(p){return p.cor||'#16807a';}
+function corDe(p){return p.cor||COR_PADRAO;}
 function doMes(p){return diaDe(p).slice(0,7)===iso(mes).slice(0,7);}
 
 /* ============ NAVEGAÇÃO ============ */
@@ -528,18 +550,32 @@ function abrirForm(html){
   document.body.appendChild(o);
 }
 function fechar(){const o=document.getElementById('ov');if(o)o.remove();}
+const ICO_CHECK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
 function escolherCor(c){
+  c=String(c).toLowerCase();
   document.getElementById('f_cor').value=c;
-  document.querySelectorAll('#f_cores button').forEach(b=>b.classList.toggle('on',b.dataset.cor===c));
+  let achou=false;
+  document.querySelectorAll('#f_cores .cor').forEach(b=>{
+    const on=b.dataset.cor===c;achou=achou||on;
+    b.classList.toggle('on',on);b.setAttribute('aria-checked',on);
+  });
+  const outra=document.getElementById('f_cor_outra');
+  if(outra){outra.classList.toggle('on',!achou);outra.style.background=achou?'':c;outra.classList.toggle('clara',!achou&&corClara(c));}
+  const n=document.getElementById('f_cor_nome');
+  if(n)n.innerHTML=`<i style="background:${c}"></i>${nomeCor(c)}`;
 }
 function swatches(atual){
-  return CORES.map(c=>`<button type="button" data-cor="${c}" style="background:${c}" class="${c===atual?'on':''}" onclick="escolherCor('${c}')"></button>`).join('');
+  atual=String(atual||COR_PADRAO).toLowerCase();
+  const naPaleta=CORES.includes(atual);
+  return `<div class="cor-nome" id="f_cor_nome"><i style="background:${atual}"></i>${nomeCor(atual)}</div>
+  <div class="grade-cores" role="radiogroup" aria-label="Cor">${PALETA.map(([n,c])=>`<button type="button" class="cor${c===atual?' on':''}${corClara(c)?' clara':''}" data-cor="${c}" style="background:${c}" title="${n}" aria-label="${n}" role="radio" aria-checked="${c===atual}" onclick="escolherCor('${c}')">${ICO_CHECK}</button>`).join('')}
+  <label class="cor outra${naPaleta?'':' on'}${!naPaleta&&corClara(atual)?' clara':''}" id="f_cor_outra" title="Outra cor" style="${naPaleta?'':'background:'+atual}">${ICO_CHECK}<span>+</span><input type="color" value="${atual}" oninput="escolherCor(this.value)" aria-label="Outra cor"></label></div>`;
 }
 
 /* ============ PLANTÕES ============ */
 function novoPlantao(){
   const primeiro=db.locais.find(l=>(db.modelos||[]).some(m=>m.localId===l.id));
-  formPlantao({id:'',nome:'',localId:primeiro?primeiro.id:null,cor:CORES[4],valor:'',inicio:diaSel+'T07:00',fim:diaSel+'T19:00',pago:false,dataPagamento:'',obs:''},true);
+  formPlantao({id:'',nome:'',localId:primeiro?primeiro.id:null,cor:COR_PADRAO,valor:'',inicio:diaSel+'T07:00',fim:diaSel+'T19:00',pago:false,dataPagamento:'',obs:''},true);
 }
 function localDoDia(el){
   localEscolhido(el);
@@ -808,7 +844,7 @@ function abrirVarios(){
     <p class="muted" id="v_cont" style="margin:8px 0 0"></p>
     <h3 class="sub" style="margin-top:14px">Detalhes (pode ajustar)</h3>
     <label>Nome</label><input id="v_nome" placeholder="Ex.: Emergência adulta">
-    <label>Cor</label><div class="cores" id="f_cores">${swatches(CORES[4])}</div><input type="hidden" id="f_cor" value="${CORES[4]}">
+    <label>Cor</label><div class="cores" id="f_cores">${swatches(COR_PADRAO)}</div><input type="hidden" id="f_cor" value="${COR_PADRAO}">
     <label>Valor (R$)</label><input id="v_valor" inputmode="decimal">
     <label>Horário de início</label><input id="v_ini" type="time" value="07:00">
     <label>Horário de fim</label><input id="v_fim" type="time" value="19:00">
@@ -1036,7 +1072,7 @@ function usarModeloNoDia(id){
 }
 function editarModelo(id,localPreset){
   const lp=localPreset?local(localPreset):null;
-  const m=id?(db.modelos||[]).find(x=>x.id===id):{id:'',nome:'',localId:localPreset||'',cor:lp?lp.cor:CORES[4],valor:'',hini:'07:00',hfim:'19:00'};
+  const m=id?(db.modelos||[]).find(x=>x.id===id):{id:'',nome:'',localId:localPreset||'',cor:lp?lp.cor:COR_PADRAO,valor:'',hini:'07:00',hfim:'19:00'};
   abrirForm(`
     <h2>${id?'Editar plantão cadastrado':'Cadastrar novo plantão'}</h2>
     <p class="muted" style="margin:0 0 6px">Fica salvo para você usar sempre que quiser. Ex.: Hospital Tricentenário → Emergência pediátrica.</p>
