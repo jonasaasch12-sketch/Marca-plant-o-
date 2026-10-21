@@ -739,11 +739,17 @@ const ORDEM_CAT=['diurno','noturno','diurno_fds','noturno_fds'];
 // Compara nomes sem acento, maiúsculas ou espaços extras: "Emergência  Pediatrica" = "emergencia pediátrica"
 function chaveNome(n){return (n||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
 
+// Usa o dia e o horário do plantão lançado (não o do cadastro base).
+// Noturno: a maior parte das horas fica entre 19:00 e 07:00. FDS: começa no sábado ou domingo.
 function classificarPlantao(p){
-  const d=parseDT(p.inicio);
-  const h=d.getHours();
-  const turno=(h>=7&&h<19)?'diurno':'noturno';
-  const dia=d.getDay();
+  const ini=parseDT(p.inicio), fim=parseDT(p.fim||p.inicio);
+  let noite=0, diaH=0;
+  for(let t=new Date(ini);t<fim;t=new Date(t.getTime()+15*60000)){
+    const h=t.getHours();
+    if(h>=19||h<7)noite++;else diaH++;
+  }
+  const turno=(noite>diaH||(noite===diaH&&(ini.getHours()>=19||ini.getHours()<7)))?'noturno':'diurno';
+  const dia=ini.getDay();
   return (dia===0||dia===6)?turno+'_fds':turno;
 }
 // Datas em ordem; com mais de um mês, junta os dias por mês: "28, 30/09 e 02, 05/10"
