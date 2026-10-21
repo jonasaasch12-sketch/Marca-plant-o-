@@ -637,19 +637,20 @@ function cardClick(id){
 let multiDias=new Set();
 let multiMes=new Date();
 function abrirVarios(){
-  multiDias=new Set([diaSel]);
+  multiDias=new Set(modoVarios?diasMulti:[]);
   multiMes=new Date(mes.getFullYear(),mes.getMonth(),1);
-  const opts=['<option value="">Nenhum</option>',...db.locais.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`)].join('');
+  const primeiro=db.locais.find(l=>(db.modelos||[]).some(m=>m.localId===l.id));
   abrirForm(`
     <h2>Vários plantões</h2>
-    <label>Usar um modelo</label><select id="v_modelo" onchange="aplicarModeloVarios()"><option value="">Nenhum</option>${opcoesModelos()}</select>
-    <p class="muted" style="margin:0">Toque nos dias em que você trabalha. Cada dia marcado vira um plantão com os dados abaixo.</p>
+    <label>1. Local</label><select id="v_local" onchange="varLocal(this)">${opcoesLocal(primeiro?primeiro.id:'')}</select>
+    <label>2. Qual plantão</label><select id="v_modelo" onchange="aplicarModeloVarios()"></select>
+    <p class="muted" style="margin:10px 0 0">3. Toque nos dias em que você vai dar esse plantão.</p>
     <div class="mesnav" style="margin-top:10px"><button onclick="mudaMesVarios(-1)">‹</button><strong id="v_mes"></strong><button onclick="mudaMesVarios(1)">›</button></div>
     <div class="semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
     <div class="grid" id="v_grid"></div>
     <p class="muted" id="v_cont" style="margin:8px 0 0"></p>
-    <label>Nome</label><input id="v_nome" placeholder="Ex.: Plantão noturno">
-    <label>Local</label><select id="v_local" onchange="varLocal()">${opts}</select>
+    <h3 class="sub" style="margin-top:14px">Detalhes (pode ajustar)</h3>
+    <label>Nome</label><input id="v_nome" placeholder="Ex.: Emergência adulta">
     <label>Cor</label><div class="cores" id="f_cores">${swatches(CORES[4])}</div><input type="hidden" id="f_cor" value="${CORES[4]}">
     <label>Valor (R$)</label><input id="v_valor" inputmode="decimal">
     <label>Horário de início</label><input id="v_ini" type="time" value="07:00">
@@ -660,6 +661,7 @@ function abrirVarios(){
       <button class="btn primary" onclick="salvarVarios()">Salvar</button>
     </div>`);
   renderGridVarios();
+  varLocal(document.getElementById('v_local'));
 }
 function renderGridVarios(){
   const ano=multiMes.getFullYear(), m=multiMes.getMonth();
@@ -681,10 +683,15 @@ function toggleDiaVarios(k){
   if(multiDias.has(k))multiDias.delete(k);else multiDias.add(k);
   renderGridVarios();
 }
-function varLocal(){
-  const l=local(document.getElementById('v_local').value);
-  if(!l)return;
-  escolherCor(l.cor);
+function varLocal(el){
+  localEscolhido(el);
+  const lid=el.value||null;
+  const ms=(db.modelos||[]).filter(m=>(m.localId||null)===lid);
+  const sel=document.getElementById('v_modelo');
+  sel.innerHTML=ms.map(m=>`<option value="${m.id}">${esc(m.nome)} · ${m.hini}–${m.hfim} · ${dinheiro(m.valor)}</option>`).join('')
+    +'<option value="">Outro (preencher abaixo)</option>';
+  sel.value=ms.length?ms[0].id:'';
+  aplicarModeloVarios();
 }
 function salvarVarios(){
   const g=x=>document.getElementById(x).value;
@@ -707,7 +714,9 @@ function salvarVarios(){
   const [yy,mm]=dias[0].split('-');
   mes=new Date(+yy,+mm-1,1);
   diaSel=dias[0];
+  modoVarios=false;diasMulti=new Set();
   fechar();render();
+  mostrarAviso(itens.length>1?`${itens.length} plantões criados com sucesso.`:'Plantão criado com sucesso.');
 }
 
 /* ============ RESUMO PARA NOTA FISCAL ============ */
@@ -816,9 +825,8 @@ function aplicarModelo(){
 }
 function aplicarModeloVarios(){
   const m=(db.modelos||[]).find(x=>x.id===document.getElementById('v_modelo').value);
-  if(!m)return;
+  if(!m){document.getElementById('v_nome').value='';document.getElementById('v_valor').value='';return;}
   document.getElementById('v_nome').value=m.nome;
-  document.getElementById('v_local').value=m.localId||'';
   escolherCor(m.cor);
   document.getElementById('v_valor').value=m.valor||'';
   document.getElementById('v_ini').value=m.hini;
