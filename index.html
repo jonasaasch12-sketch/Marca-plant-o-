@@ -3,78 +3,177 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#16807a">
+<meta name="theme-color" content="#0f766e">
+<meta name="description" content="Agenda de plantões, pagamentos e texto para nota fiscal.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Marca Plantão">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="marca/icone.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="marca/favicon-32.png">
+<link rel="apple-touch-icon" href="marca/apple-touch-icon.png">
 <title>Marca Plantão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--primary:#16807a;--bg:#f4f6f6;--card:#ffffff;--text:#1c2425;--muted:#6a7677;--line:#e1e6e6;--ok:#1e8e3e;--no:#d93025}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0f1414;--card:#1a2223;--text:#eef3f3;--muted:#98a6a6;--line:#2b3637}}
+/* ============ IDENTIDADE ============ */
+:root{
+  --primary:#0f766e;--primary-2:#14b8a6;--primary-soft:#e3f5f2;--on-primary:#fff;--accent:#f59e0b;
+  --bg:#f3f6f6;--card:#ffffff;--card-2:#f8fafa;--text:#10201f;--muted:#667a7b;--line:#e2e9e9;
+  --ok:#15803d;--ok-soft:#dcfce7;--no:#e11d48;--no-soft:#ffe4e6;
+  --shadow:0 1px 2px rgba(16,32,31,.05),0 6px 18px rgba(16,32,31,.06);
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --primary:#0f8f85;--primary-2:#2dd4bf;--primary-soft:#123a37;
+  --bg:#0a1112;--card:#121d1e;--card-2:#172526;--text:#e6f0ef;--muted:#91a5a5;--line:#213233;
+  --ok:#4ade80;--ok-soft:#0f3320;--no:#fb7185;--no-soft:#3b1520;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+}
+html .btn.soft,html .btn.link{color:var(--primary-2)}
+html nav button.on,html .dia.hoje{color:var(--primary-2)}
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:84px}
-header{position:sticky;top:0;z-index:5;background:var(--primary);color:#fff;padding:14px 16px;font-size:18px;font-weight:600}
-main{padding:12px 16px;max-width:640px;margin:0 auto}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
-nav button{flex:1;border:0;background:none;color:var(--muted);padding:8px 0 10px;font-size:12px;cursor:pointer}
-nav button.on{color:var(--primary);font-weight:600}
-nav i{display:block;font-style:normal;font-size:20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:calc(92px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+svg.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+
+/* ============ TOPO ============ */
+header{position:sticky;top:0;z-index:5;color:#fff;background:linear-gradient(135deg,var(--primary-2) -40%,var(--primary) 55%,#0b4f4a 140%);padding:calc(12px + env(safe-area-inset-top)) 16px 12px;box-shadow:0 2px 12px rgba(15,118,110,.25)}
+.topo{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.topo .marca{width:34px;height:34px;flex:none;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.topo h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em}
+.topo h1 span{font-weight:500;opacity:.9}
+.topo small{display:block;font-size:12px;font-weight:500;opacity:.85;margin-top:1px}
+main{padding:14px 16px;max-width:720px;margin:0 auto}
+
+/* ============ NAVEGAÇÃO ============ */
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav .itens{display:flex;width:100%;max-width:720px}
+nav button{flex:1;border:0;background:none;color:var(--muted);padding:4px 0;font-size:11.5px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button .bolha{display:flex;align-items:center;justify-content:center;width:56px;height:30px;border-radius:999px;transition:background .2s}
+nav button.on{color:var(--primary)}
+nav button.on .bolha{background:var(--primary-soft)}
+nav svg.ic{width:22px;height:22px}
+
+/* ============ BLOCOS ============ */
+.painel,.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+.painel{padding:14px;margin-bottom:12px}
+.card{padding:14px 16px;margin-bottom:10px;cursor:pointer;border:1px solid transparent}
 .linha{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.hora{font-size:15px;font-weight:600}
-.valor{font-weight:600}
-.nome{font-size:17px;font-weight:700;margin:4px 0}
+.hora{font-size:14px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px}
+.valor{font-weight:700;font-variant-numeric:tabular-nums}
+.nome{font-size:17px;font-weight:700;margin:4px 0;letter-spacing:-.01em}
 .muted{color:var(--muted);font-size:14px}
-.pill{border:0;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:#fff;cursor:pointer}
-.pill.ok{background:var(--ok)}
-.pill.no{background:var(--no)}
-.mesnav{display:flex;justify-content:space-between;align-items:center;margin:4px 0 10px;text-transform:capitalize}
-.mesnav button,.btn{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:16px;cursor:pointer}
-.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:600}
+.local{display:inline-flex;align-items:center;gap:5px}
+.local svg.ic{width:15px;height:15px}
+.pill{border:0;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.no{background:var(--no-soft);color:var(--no)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+h3.sub{margin:20px 2px 10px;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.vazio{color:var(--muted);text-align:center;padding:22px 8px;font-size:14px}
+.titulo-sec{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:18px 2px 8px}
+
+/* ============ BOTÕES ============ */
+.btn{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;transition:transform .08s,filter .2s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--primary);color:var(--on-primary);border-color:var(--primary);box-shadow:0 4px 12px rgba(15,118,110,.25)}
+.btn.soft{background:var(--primary-soft);color:var(--primary);border-color:transparent}
 .btn.danger{color:var(--no)}
+.btn.link{border:0;background:none;color:var(--primary);box-shadow:none}
+.acoes-cal{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.acoes-cal .btn.primary{grid-column:1/-1;min-height:50px;font-size:16px}
+
+/* ============ CALENDÁRIO ============ */
+.mesnav{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px;text-transform:capitalize}
+.mesnav strong{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.mesnav button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:20px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.chip{border:1px solid var(--line);background:var(--card-2);color:var(--text);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
 .semana,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
-.semana{font-size:12px;color:var(--muted);margin-bottom:4px}
-.dia{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 0;min-height:52px;color:var(--text);cursor:pointer;font-size:14px}
-.dia.hoje{border-color:var(--primary);font-weight:700}
-.dia.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+.semana{font-size:11.5px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+.dia{background:transparent;border:0;border-radius:12px;padding:7px 0 5px;min-height:48px;color:var(--text);cursor:pointer;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;align-items:center}
+.dia:hover{background:var(--card-2)}
+.dia.hoje{color:var(--primary);font-weight:800;box-shadow:inset 0 0 0 2px var(--primary)}
+.dia.sel{background:var(--primary);color:#fff;font-weight:700;box-shadow:0 4px 10px rgba(15,118,110,.3)}
 .dots{display:flex;justify-content:center;gap:3px;margin-top:4px;height:6px}
 .dots i{width:6px;height:6px;border-radius:50%;display:block}
-h3.sub{margin:16px 0 8px;font-size:15px;text-transform:capitalize}
-.vazio{color:var(--muted);text-align:center;padding:20px 8px}
+.dia.sel .dots i{box-shadow:0 0 0 1.5px #fff}
+
+/* ============ RESUMO DO MÊS ============ */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stats div{background:var(--card);border-radius:14px;padding:10px 12px;box-shadow:var(--shadow)}
+.stats small{display:block;font-size:11.5px;font-weight:600;color:var(--muted)}
+.stats b{display:block;font-size:15px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .totais{display:flex;gap:10px;margin-bottom:12px}
-.totais div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
-.totais small{color:var(--muted);display:block}
-.totais b{font-size:16px}
-.filtros{display:flex;gap:6px;margin-bottom:12px}
-.filtros button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:14px;cursor:pointer}
-.filtros button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
-.fab{position:fixed;right:18px;bottom:84px;width:56px;height:56px;border-radius:50%;border:0;background:var(--primary);color:#fff;font-size:30px;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:10}
-.sheet{background:var(--bg);color:var(--text);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
-.sheet h2{margin:0 0 8px;font-size:18px}
-label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
-input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font-size:16px;font-family:inherit}
-.check{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:15px;color:var(--text)}
-.check input{width:auto}
-.cores{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.cores button{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}
-.cores button.on{border-color:var(--text)}
-.acoes{display:flex;gap:8px;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
+.totais div{flex:1;background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.totais small{color:var(--muted);display:block;font-size:12px;font-weight:600}
+.totais b{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.filtros{display:flex;gap:4px;margin-bottom:12px;background:var(--card-2);padding:4px;border-radius:12px;border:1px solid var(--line)}
+.filtros button{flex:1;padding:8px;border-radius:9px;border:0;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer}
+.filtros button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+
+/* ============ BOTÃO FLUTUANTE ============ */
+.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:18px;border:0;background:linear-gradient(135deg,var(--primary-2),var(--primary));color:#fff;box-shadow:0 8px 20px rgba(15,118,110,.4);cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center}
+.fab svg.ic{width:28px;height:28px;stroke-width:2.4}
+
+/* ============ JANELAS (FORMULÁRIOS) ============ */
+.overlay{position:fixed;inset:0;background:rgba(6,20,19,.5);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center;z-index:10;animation:fade .15s}
+.sheet{background:var(--bg);color:var(--text);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom));animation:sobe .22s ease-out}
+.sheet::before{content:"";display:block;width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sheet h2{margin:0 0 8px;font-size:20px;font-weight:800;letter-spacing:-.01em}
+.sheet h3.sub{text-transform:none}
+@keyframes sobe{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (min-width:700px){.overlay{align-items:center}.sheet{border-radius:22px;max-height:88vh}}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);font-size:16px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.check{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;font-weight:500;color:var(--text)}
+.check input{width:20px;height:20px;accent-color:var(--primary)}
+.cores{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.cores button{width:34px;height:34px;border-radius:50%;border:3px solid var(--bg);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.cores button.on{box-shadow:0 0 0 2px var(--text)}
+.acoes{display:flex;gap:8px;justify-content:space-between;margin-top:20px;flex-wrap:wrap}
 .acoes .direita{display:flex;gap:8px;margin-left:auto}
-.erro{color:var(--no);font-size:14px;min-height:20px;margin:8px 0 0}
-.swipe{position:relative;margin-bottom:10px;border-radius:12px;overflow:hidden}
-.swipe .card{margin:0;position:relative;z-index:1;touch-action:pan-y;background:var(--card);transition:transform .2s}
-.acoes-swipe{position:absolute;right:0;top:0;bottom:0;display:flex;width:170px}
-.acoes-swipe button{flex:1;border:0;color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+.erro:empty{display:none}
+.erro{color:var(--no);font-size:14px;min-height:20px;margin:8px 0 0;text-align:center}
+
+/* ============ CARTÕES DE PLANTÃO ============ */
+.swipe{position:relative;margin-bottom:10px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.swipe .card{border-radius:0;margin:0;position:relative;z-index:1;touch-action:pan-y;transition:transform .2s;box-shadow:none;border-left:5px solid var(--primary)}
+.acoes-swipe{position:absolute;right:1px;top:1px;bottom:1px;display:flex;width:170px;visibility:hidden}
+.swipe.ativo .acoes-swipe{visibility:visible}
+.acoes-swipe button{flex:1;border:0;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
 .sw-pago{background:var(--ok)}
 .sw-del{background:var(--no)}
-#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-150%);background:var(--ok);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;transition:transform .25s;max-width:90%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.25)}
-#toast.on{transform:translateX(-50%) translateY(0)}
-.item-modelo{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.item-modelo{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;margin-top:8px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:var(--card-2)}
 .grupo-local{font-weight:700;margin:14px 0 6px;padding-left:8px;border-left:4px solid var(--primary)}
+
+/* ============ AVISO ============ */
+#toast{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-160%);background:#10201f;color:#fff;padding:11px 16px;border-radius:14px;font-weight:600;font-size:14px;z-index:20;transition:transform .25s;max-width:90%;text-align:center;box-shadow:0 10px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:8px}
+#toast::before{content:"✓";display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#10201f;font-size:13px;font-weight:800}
+#toast.on{transform:translateX(-50%) translateY(0)}
+
+/* ============ ENTRADA ============ */
+body.sem-topo header{display:none}
+.entrada{max-width:420px;margin:0 auto;padding-top:calc(28px + env(safe-area-inset-top))}
+.hero{text-align:center;margin:8px 0 18px}
+.hero img{width:84px;height:84px;border-radius:24px;box-shadow:0 10px 24px rgba(15,118,110,.3)}
+.hero h1{margin:14px 0 4px;font-size:28px;font-weight:800;letter-spacing:-.02em}
+.hero h1 span{color:var(--primary);}
+.hero p{margin:0 auto;max-width:300px;color:var(--muted);font-size:15px;line-height:1.45}
+.entrada .btn{width:100%}
+.rodape{text-align:center;color:var(--muted);font-size:12.5px;margin:22px 0 8px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.rodape img{width:28px;height:28px;border-radius:8px;opacity:.9}
 </style>
 </head>
 <body>
-<header id="top">Marca Plantão</header>
+<header><div class="topo"><img class="marca" src="marca/icone.svg" alt=""><div><h1 id="top"><span>Marca</span> Plantão</h1><small id="subtopo"></small></div></div></header>
 <main id="conteudo"><p class="vazio">Carregando…</p></main>
-<button class="fab" id="fab" onclick="novoPlantao()" aria-label="Novo plantão" style="display:none">+</button>
+<button class="fab" id="fab" onclick="novoPlantao()" aria-label="Novo plantão" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
 <nav id="nav"></nav>
 
 <!-- Firebase (SDK compatível, versão fixa) -->
@@ -232,6 +331,23 @@ function togglePago(id){
   render();
 }
 
+/* ============ ÍCONES ============ */
+const IC={
+  cal:'<rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><path d="M7.5 15h2l1.2-2 1.6 4 1.2-2H16.5"/>',
+  pag:'<rect x="2.5" y="6" width="19" height="13" rx="3"/><path d="M2.5 10.5h19"/><path d="M6.5 15h3"/>',
+  loc:'<path d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  aj:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  pin:'<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  relogio:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  mais:'<path d="M12 5v14M5 12h14"/>',
+  multi:'<rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><path d="m8.5 15.5 2 2 4-4"/>',
+  nota:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'
+};
+function ic(n){return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;}
+function mesNav(){
+  return `<div class="mesnav"><button onclick="mudaMes(-1)" aria-label="Mês anterior">‹</button><strong>${MESES[mes.getMonth()]} ${mes.getFullYear()}</strong><button onclick="mudaMes(1)" aria-label="Próximo mês">›</button></div>`;
+}
+
 /* ============ RENDERIZAÇÃO ============ */
 function render(){
   const top=document.getElementById('top');
@@ -241,32 +357,41 @@ function render(){
 
   if(!pronto){main.innerHTML='<p class="vazio">Carregando…</p>';nav.innerHTML='';fab.style.display='none';return;}
   if(!usuario){
-    top.textContent='Marca Plantão';
+    top.innerHTML='<span>Marca</span> Plantão';
+    document.getElementById('subtopo').textContent='';
     nav.innerHTML='';fab.style.display='none';
+    document.body.classList.add('sem-topo');
     main.innerHTML=vLogin();
     return;
   }
-  const abas=[['cal','📅','Calendário'],['pag','💰','Pagamentos'],['loc','🗂️','Cadastros'],['aj','⚙️','Ajustes']];
-  nav.innerHTML=abas.map(([k,i,t])=>`<button class="${aba===k?'on':''}" onclick="ir('${k}')"><i>${i}</i>${t}</button>`).join('');
-  const titulos={cal:'Marca Plantão',pag:'Pagamentos',loc:'Cadastros',aj:'Ajustes'};
-  top.textContent=titulos[aba];
-  fab.style.display=(aba==='cal'||aba==='pag')?'flex':'none';
+  document.body.classList.remove('sem-topo');
+  const abas=[['cal','Calendário'],['pag','Pagamentos'],['loc','Cadastros'],['aj','Ajustes']];
+  nav.innerHTML='<div class="itens">'+abas.map(([k,t])=>`<button class="${aba===k?'on':''}" onclick="ir('${k}')" aria-current="${aba===k?'page':'false'}"><span class="bolha">${ic(k)}</span>${t}</button>`).join('')+'</div>';
+  const titulos={cal:'<span>Marca</span> Plantão',pag:'Pagamentos',loc:'Cadastros',aj:'Ajustes'};
+  const subs={cal:'Seus plantões em dia',pag:'Recebido e a receber',loc:'Locais, plantões e nota fiscal',aj:'Conta e backup'};
+  top.innerHTML=titulos[aba];
+  document.getElementById('subtopo').textContent=subs[aba];
+  fab.style.display='none';
   const views={cal:vCalendario,pag:vPagamentos,loc:vLocais,aj:vAjustes};
   main.innerHTML=views[aba]();
 }
 
 function vLogin(){
-  return `<div class="card" style="cursor:default;margin-top:24px">
-    <h2 style="margin:0 0 4px">Entrar</h2>
-    <p class="muted" style="margin:0 0 4px">Seus plantões ficam salvos na sua conta e aparecem em qualquer aparelho.</p>
-    <label>E-mail</label><input id="a_email" type="email" autocomplete="email">
-    <label>Senha</label><input id="a_senha" type="password" autocomplete="current-password">
-    <div class="acoes">
-      <button class="btn" onclick="criarConta()">Criar conta</button>
-      <div class="direita"><button class="btn primary" onclick="entrar()">Entrar</button></div>
+  return `<div class="entrada">
+    <div class="hero">
+      <img src="marca/icone.svg" alt="Marca Plantão">
+      <h1>Marca <span>Plantão</span></h1>
+      <p>Seus plantões, pagamentos e notas fiscais organizados em um só lugar.</p>
     </div>
-    <p style="margin:12px 0 0;text-align:center"><button class="btn" style="border:0;background:none;color:var(--primary)" onclick="esqueciSenha()">Esqueci minha senha</button></p>
-    <p id="a_msg" class="erro"></p>
+    <div class="painel" style="padding:18px">
+      <label for="a_email" style="margin-top:0">E-mail</label><input id="a_email" type="email" autocomplete="email" placeholder="seu@email.com">
+      <label for="a_senha">Senha</label><input id="a_senha" type="password" autocomplete="current-password" placeholder="Sua senha">
+      <button class="btn primary" style="width:100%;margin-top:18px" onclick="entrar()">Entrar</button>
+      <button class="btn" style="width:100%;margin-top:8px" onclick="criarConta()">Criar conta grátis</button>
+      <button class="btn link" style="width:100%;margin-top:4px" onclick="esqueciSenha()">Esqueci minha senha</button>
+      <p id="a_msg" class="erro"></p>
+    </div>
+    <p class="muted" style="text-align:center;font-size:13px">Seus dados ficam salvos na sua conta e aparecem em qualquer aparelho.</p>
   </div>`;
 }
 
@@ -278,10 +403,9 @@ function cardPlantao(p,comData){
       <button class="sw-del" onclick="excluirPlantao('${p.id}')">Excluir</button>
     </div>
     <div class="card swipe-card" data-id="${p.id}" style="border-left:6px solid ${corDe(p)}" onclick="cardClick('${p.id}')">
-      ${comData?`<div class="muted" style="margin-bottom:4px">${dataBR(p.inicio)}</div>`:''}
-      <div class="linha"><span class="hora">${hora(p.inicio)} – ${hora(p.fim)}${cruza?' <small class="muted">(+1 dia)</small>':''}</span><span class="valor">${dinheiro(p.valor)}</span></div>
+      <div class="linha"><span class="hora">${ic('relogio')}${comData?dataBR(p.inicio).slice(0,5)+' · ':''}${hora(p.inicio)} – ${hora(p.fim)}${cruza?' <small>(+1 dia)</small>':''}</span><span class="valor">${dinheiro(p.valor)}</span></div>
       <div class="nome">${esc(p.nome||'Sem nome')}</div>
-      <div class="linha"><span class="muted">📍 ${esc(nomeLocal(p.localId))}</span>
+      <div class="linha"><span class="muted local">${ic('pin')}${esc(nomeLocal(p.localId))}</span>
       <button class="pill ${p.pago?'ok':'no'}" onclick="event.stopPropagation();togglePago('${p.id}')">${p.pago?'Pago':'Não pago'}</button></div>
     </div>
   </div>`;
@@ -292,8 +416,15 @@ function vCalendario(){
   const vazios=new Date(ano,m,1).getDay();
   const dias=new Date(ano,m+1,0).getDate();
   const hoje=iso(new Date());
-  let h=`<div class="mesnav"><button onclick="mudaMes(-1)">‹</button><strong>${MESES[m]} ${ano}</strong><button onclick="mudaMes(1)">›</button></div>`;
-  h+=`<div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn${modoVarios?' primary':''}" style="flex:1" onclick="toggleModoVarios()">${modoVarios?'Selecionando vários dias ✔':'Selecionar vários dias'}</button>${modoVarios&&diasMulti.size?'<button class="btn" onclick="limparDias()">Limpar</button>':''}</div>`;
+  const doMesL=db.plantoes.filter(doMes);
+  const somaM=l=>l.reduce((s,p)=>s+Number(p.valor||0),0);
+  let h=`<div class="stats">
+    <div><small>Plantões</small><b>${doMesL.length}</b></div>
+    <div><small>A receber</small><b style="color:var(--no)">${dinheiro(somaM(doMesL.filter(p=>!p.pago)))}</b></div>
+    <div><small>Recebido</small><b style="color:var(--ok)">${dinheiro(somaM(doMesL.filter(p=>p.pago)))}</b></div>
+  </div>`;
+  h+='<div class="painel">'+mesNav();
+  h+=`<div style="display:flex;gap:8px;align-items:center"><button class="chip${modoVarios?' on':''}" onclick="toggleModoVarios()">${ic('multi')}${modoVarios?'Selecionando vários dias':'Selecionar vários dias'}</button>${modoVarios&&diasMulti.size?'<button class="chip" onclick="limparDias()">Limpar</button>':''}</div>`;
   h+='<div class="semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div><div class="grid">';
   for(let i=0;i<vazios;i++)h+='<div></div>';
   for(let d=1;d<=dias;d++){
@@ -302,13 +433,16 @@ function vCalendario(){
     const marcado=modoVarios?diasMulti.has(k):k===diaSel;
     h+=`<button class="dia${k===hoje?' hoje':''}${marcado?' sel':''}" onclick="clicouDia('${k}')">${d}<span class="dots">${pts}</span></button>`;
   }
-  h+='</div>';
-  h+='<button class="btn primary" style="width:100%;margin-top:10px" onclick="editarModelo()">+ Cadastrar novo plantão</button>';
-  h+=`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1" onclick="novoPlantao()">+ Este dia</button><button class="btn primary" style="flex:1" onclick="abrirVarios()">+ Vários dias</button></div>`;
+  h+='</div></div>';
+  h+=`<div class="acoes-cal">
+    <button class="btn primary" onclick="editarModelo()">${ic('mais')}Cadastrar novo plantão</button>
+    <button class="btn soft" onclick="novoPlantao()">${ic('mais')}Este dia</button>
+    <button class="btn soft" onclick="abrirVarios()">${ic('multi')}Vários dias</button>
+  </div>`;
   const lista=db.plantoes.filter(p=>diaDe(p)===diaSel).sort((a,b)=>a.inicio.localeCompare(b.inicio));
   const [y,mm,dd]=diaSel.split('-').map(Number);
   const nomeDia=new Date(y,mm-1,dd).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  h+=`<h3 class="sub">${nomeDia}</h3>`;
+  h+=`<h3 class="sub">${nomeDia.charAt(0).toUpperCase()+nomeDia.slice(1)}</h3>`;
   h+=lista.length?lista.map(p=>cardPlantao(p,false)).join(''):'<p class="vazio">Nenhum plantão neste dia.</p>';
   return h;
 }
@@ -319,7 +453,7 @@ function vPagamentos(){
   const pagos=lista.filter(p=>p.pago), naoPagos=lista.filter(p=>!p.pago);
   const soma=l=>l.reduce((s,p)=>s+Number(p.valor||0),0);
   const visiveis=filtroPag==='pagos'?pagos:filtroPag==='nao'?naoPagos:lista;
-  let h=`<div class="mesnav"><button onclick="mudaMes(-1)">‹</button><strong>${MESES[m]} ${ano}</strong><button onclick="mudaMes(1)">›</button></div>`;
+  let h=`<div class="painel" style="padding:10px 12px">${mesNav().replace('class="mesnav"','class="mesnav" style="margin:0"')}</div>`;
   h+=`<div class="totais">
     <div><small>Recebido</small><b style="color:var(--ok)">${dinheiro(soma(pagos))}</b></div>
     <div><small>A receber</small><b style="color:var(--no)">${dinheiro(soma(naoPagos))}</b></div>
@@ -337,45 +471,51 @@ function itemModelo(m){
 }
 function vLocais(){
   const modelos=db.modelos||[];
-  let h='<button class="btn primary" style="width:100%;margin-bottom:8px" onclick="editarLocal()">+ Novo local</button>';
-  h+='<button class="btn" style="width:100%;margin-bottom:12px" onclick="abrirResumo(\'todos\')">Resumo geral para nota</button>';
+  let h=`<div class="acoes-cal" style="margin-bottom:6px">
+    <button class="btn primary" onclick="editarLocal()">${ic('mais')}Novo local</button>
+    <button class="btn soft" style="grid-column:1/-1" onclick="abrirResumo('todos')">${ic('nota')}Resumo geral para nota fiscal</button>
+  </div>`;
+  if(db.locais.length)h+='<div class="titulo-sec">Seus locais</div>';
   if(!db.locais.length)h+='<p class="vazio">Cadastre um local (ex.: Hospital Tricentenário) e depois crie os plantões dentro dele.</p>';
   h+=db.locais.map(l=>{
     const ps=db.plantoes.filter(p=>p.localId===l.id);
     const tot=ps.reduce((s,p)=>s+Number(p.valor||0),0);
     const ms=modelos.filter(m=>m.localId===l.id);
-    return `<div class="card" style="border-left:6px solid ${l.cor};cursor:default">
+    return `<div class="card" style="border-left:5px solid ${l.cor};cursor:default">
       <div class="linha"><span class="nome" style="margin:0;cursor:pointer" onclick="editarLocal('${l.id}')">${esc(l.nome)}</span>
-      <button class="pill ok" style="background:var(--primary)" onclick="abrirResumo('${l.id}')">Resumo / nota</button></div>
+      <button class="chip" onclick="abrirResumo('${l.id}')">${ic('nota')}Nota</button></div>
       <div class="muted" style="margin-top:4px">${ps.length} ${ps.length===1?'plantão lançado':'plantões lançados'} · ${dinheiro(tot)} no total</div>
-      <div style="margin-top:10px;font-weight:600">Plantões cadastrados</div>
+      <div class="titulo-sec" style="margin:14px 0 2px">Plantões cadastrados</div>
       ${ms.length?ms.map(itemModelo).join(''):'<p class="muted" style="margin:6px 0">Nenhum plantão neste local ainda.</p>'}
-      <button class="btn" style="width:100%;margin-top:8px" onclick="editarModelo(null,'${l.id}')">+ Plantão em ${esc(l.nome)}</button>
+      <button class="btn soft" style="width:100%;margin-top:10px" onclick="editarModelo(null,'${l.id}')">${ic('mais')}Plantão em ${esc(l.nome)}</button>
     </div>`;
   }).join('');
   const semLocal=modelos.filter(m=>!m.localId);
   if(semLocal.length){
-    h+=`<div class="card" style="cursor:default"><div style="font-weight:600">Sem local</div>${semLocal.map(itemModelo).join('')}</div>`;
+    h+=`<div class="card" style="cursor:default"><div class="nome" style="margin:0">Sem local</div>${semLocal.map(itemModelo).join('')}</div>`;
   }
-  h+='<button class="btn" style="width:100%;margin-top:6px" onclick="editarModelo()">+ Plantão sem local</button>';
+  h+=`<button class="btn" style="width:100%;margin-top:6px" onclick="editarModelo()">${ic('mais')}Plantão sem local</button>`;
   return h;
 }
 
 function vAjustes(){
-  return `<div class="card" style="cursor:default">
-    <p style="margin:0 0 10px">Conectado como <b>${esc(usuario.email)}</b>.</p>
+  return `<div class="titulo-sec" style="margin-top:4px">Conta</div>
+  <div class="painel">
+    <p style="margin:0 0 12px">Conectado como <b>${esc(usuario.email)}</b></p>
     <button class="btn" style="width:100%" onclick="sair()">Sair da conta</button>
   </div>
-  <div class="card" style="cursor:default">
-    <p style="margin:0 0 10px">Faça um backup de vez em quando, para ter uma cópia guardada no seu aparelho.</p>
+  <div class="titulo-sec">Backup</div>
+  <div class="painel">
+    <p class="muted" style="margin:0 0 12px">Faça um backup de vez em quando, para ter uma cópia guardada no seu aparelho.</p>
     <button class="btn primary" style="width:100%" onclick="exportar()">Exportar backup (.json)</button>
     <label>Restaurar backup</label>
     <input type="file" accept="application/json,.json" onchange="importar(this)">
   </div>
-  <div class="card" style="cursor:default">
+  <div class="titulo-sec">Zona de perigo</div>
+  <div class="painel">
     <button class="btn danger" style="width:100%" onclick="apagarTudo()">Apagar todos os meus dados</button>
   </div>
-  <p class="muted" style="text-align:center">${db.plantoes.length} plantões · ${db.locais.length} locais</p>`;
+  <div class="rodape"><img src="marca/icone.svg" alt=""><span><b>Marca Plantão</b> · ${db.plantoes.length} plantões · ${db.locais.length} locais</span></div>`;
 }
 
 /* ============ MODAL ============ */
@@ -620,6 +760,7 @@ conteudoEl.addEventListener('pointermove',e=>{
   sw.dx=dx;
   const pos=Math.max(-ABRE,Math.min(0,sw.base+dx));
   sw.card.style.transform=`translateX(${pos}px)`;
+  sw.card.parentElement.classList.add('ativo');
 });
 function fimSwipe(){
   if(!sw)return;
@@ -632,6 +773,7 @@ function fimSwipe(){
   card.style.transition='transform .2s';
   card.dataset.open=abrir?'1':'0';
   card.style.transform=abrir?`translateX(-${ABRE}px)`:'translateX(0)';
+  if(!abrir)setTimeout(()=>{if(card.dataset.open!=='1')card.parentElement.classList.remove('ativo');},220);
 }
 conteudoEl.addEventListener('pointerup',fimSwipe);
 conteudoEl.addEventListener('pointercancel',fimSwipe);
@@ -639,6 +781,7 @@ function fecharSwipe(card){
   card.style.transition='transform .2s';
   card.dataset.open='0';
   card.style.transform='translateX(0)';
+  setTimeout(()=>{if(card.dataset.open!=='1')card.parentElement.classList.remove('ativo');},220);
 }
 function cardClick(id){
   if(swipeMoveu)return;

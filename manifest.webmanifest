@@ -1,0 +1,16 @@
+{
+  "name": "Marca Plantão",
+  "short_name": "Marca Plantão",
+  "description": "Agenda de plantões, pagamentos e texto para nota fiscal.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f6",
+  "theme_color": "#0f766e",
+  "icons": [
+    {"src": "marca/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "marca/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "marca/icone-mascara-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
