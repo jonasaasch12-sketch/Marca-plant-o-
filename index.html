@@ -757,18 +757,17 @@ function gerarTextoNota(lista,de,ate){
   if(!lista.length)return 'Nenhum plantão encontrado com esses filtros.';
   const grupos={};
   lista.forEach(p=>{
-    const loc=nomeLocal(p.localId);
     const cat=classificarPlantao(p);
-    const chave=loc+'|'+cat;
-    if(!grupos[chave])grupos[chave]={loc,cat,itens:[]};
+    const unit=Number(p.valor||0);
+    const chave=cat+'|'+unit;
+    if(!grupos[chave])grupos[chave]={cat,unit,itens:[]};
     grupos[chave].itens.push(p);
   });
-  const linhas=Object.values(grupos).sort((a,b)=>a.loc.localeCompare(b.loc)||ORDEM_CAT.indexOf(a.cat)-ORDEM_CAT.indexOf(b.cat));
+  const linhas=Object.values(grupos).sort((a,b)=>ORDEM_CAT.indexOf(a.cat)-ORDEM_CAT.indexOf(b.cat)||a.unit-b.unit);
   const partes=linhas.map(g=>{
-    const datas=[...new Set(g.itens.map(p=>dataBR(p.inicio).slice(0,5)))];
+    const datas=g.itens.map(p=>dataBR(p.inicio).slice(0,5));
     const v=g.itens.reduce((s,p)=>s+Number(p.valor||0),0);
-    const n=g.itens.length;
-    return `${CATS[g.cat]}, ${g.loc}, dias ${datas.join(', ')}, ${n} ${n===1?'plantão':'plantões'}, valor total ${dinheiro(v)}.`;
+    return `${CATS[g.cat]}, dias ${datas.join(', ')}, valor unitário ${dinheiro(g.unit)}, valor total ${dinheiro(v)}.`;
   });
   const total=lista.reduce((s,p)=>s+Number(p.valor||0),0);
   const ini=de?dataBR(de+'T00:00'):dataBR(lista[0].inicio), fim=ate?dataBR(ate+'T00:00'):dataBR(lista[lista.length-1].inicio);
