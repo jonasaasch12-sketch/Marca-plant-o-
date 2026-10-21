@@ -304,13 +304,13 @@ function vCalendario(){
   }
   h+='</div>';
   h+='<button class="btn primary" style="width:100%;margin-top:10px" onclick="editarModelo()">+ Cadastrar novo plantão</button>';
+  h+=`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1" onclick="novoPlantao()">+ Este dia</button><button class="btn primary" style="flex:1" onclick="abrirVarios()">+ Vários dias</button></div>`;
   const lista=db.plantoes.filter(p=>diaDe(p)===diaSel).sort((a,b)=>a.inicio.localeCompare(b.inicio));
   const [y,mm,dd]=diaSel.split('-').map(Number);
   const nomeDia=new Date(y,mm-1,dd).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   h+=`<h3 class="sub">${nomeDia}</h3>`;
   h+=lista.length?lista.map(p=>cardPlantao(p,false)).join(''):'<p class="vazio">Nenhum plantão neste dia.</p>';
   h+=blocoModelosDia();
-  h+=`<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="novoPlantao()">+ Este dia</button><button class="btn primary" style="flex:1" onclick="abrirVarios()">+ Vários dias</button></div>`;
   return h;
 }
 
