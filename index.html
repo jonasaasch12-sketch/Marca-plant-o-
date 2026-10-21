@@ -151,7 +151,7 @@ auth.onAuthStateChanged(async u=>{
   if(u){
     try{await carregarDados();}
     catch(e){
-      db={locais:[],plantoes:[]};
+      db={locais:[],plantoes:[],modelos:[]};
       alert('Erro ao carregar seus dados: '+e.message);
     }
   }else{
@@ -398,16 +398,29 @@ function swatches(atual){
 
 /* ============ PLANTÕES ============ */
 function novoPlantao(){
-  formPlantao({id:'',nome:'',localId:null,cor:CORES[4],valor:'',inicio:diaSel+'T07:00',fim:diaSel+'T19:00',pago:false,dataPagamento:'',obs:''},true);
+  const primeiro=db.locais.find(l=>(db.modelos||[]).some(m=>m.localId===l.id));
+  formPlantao({id:'',nome:'',localId:primeiro?primeiro.id:null,cor:CORES[4],valor:'',inicio:diaSel+'T07:00',fim:diaSel+'T19:00',pago:false,dataPagamento:'',obs:''},true);
+}
+function localDoDia(el){
+  localEscolhido(el);
+  const lid=el.value||null;
+  const ms=(db.modelos||[]).filter(m=>(m.localId||null)===lid);
+  const sel=document.getElementById('f_modelo');
+  sel.innerHTML=ms.map(m=>`<option value="${m.id}">${esc(m.nome)} · ${m.hini}–${m.hfim} · ${dinheiro(m.valor)}</option>`).join('')
+    +'<option value="">Outro (preencher abaixo)</option>';
+  sel.value=ms.length?ms[0].id:'';
+  aplicarModelo();
 }
 function editarPlantao(id){formPlantao(db.plantoes.find(p=>p.id===id),false);}
 
 function formPlantao(p,novo){
   abrirForm(`
     <h2>${novo?'Novo plantão':'Editar plantão'}</h2>
-    ${novo?`<label>Plantão cadastrado</label><select id="f_modelo" onchange="aplicarModelo()"><option value="">Nenhum (preencher abaixo)</option>${opcoesModelos()}</select>`:''}
+    ${novo?`<label>1. Local</label><select id="f_local" onchange="localDoDia(this)">${opcoesLocal(p.localId)}</select>
+    <label>2. Qual plantão</label><select id="f_modelo" onchange="aplicarModelo()"></select>
+    <h3 class="sub" style="margin-top:14px">Detalhes (pode ajustar)</h3>`:''}
     <label>Nome</label><input id="f_nome" value="${esc(p.nome)}" placeholder="Ex.: Plantão noturno">
-    <label>Local</label><select id="f_local" onchange="localEscolhido(this)">${opcoesLocal(p.localId)}</select>
+    ${novo?'':`<label>Local</label><select id="f_local" onchange="localEscolhido(this)">${opcoesLocal(p.localId)}</select>`}
     <label>Cor</label><div class="cores" id="f_cores">${swatches(p.cor)}</div><input type="hidden" id="f_cor" value="${p.cor}">
     <label>Valor (R$)</label><input id="f_valor" inputmode="decimal" value="${p.valor}">
     <label>Início</label><input id="f_ini" type="datetime-local" value="${p.inicio}">
@@ -424,6 +437,7 @@ function formPlantao(p,novo){
         <button class="btn primary" onclick="salvarPlantao('${novo?'':p.id}')">Salvar</button>
       </div>
     </div>`);
+  if(novo)localDoDia(document.getElementById('f_local'));
 }
 
 function opcoesLocal(sel){
@@ -829,7 +843,7 @@ function opcoesModelos(){
 }
 function aplicarModelo(){
   const m=(db.modelos||[]).find(x=>x.id===document.getElementById('f_modelo').value);
-  if(!m)return;
+  if(!m){document.getElementById('f_nome').value='';document.getElementById('f_valor').value='';return;}
   const dia=document.getElementById('f_ini').value.split('T')[0]||diaSel;
   const ini=dia+'T'+m.hini;
   let fim=dia+'T'+m.hfim;
@@ -865,7 +879,8 @@ function editarModelo(id,localPreset){
   abrirForm(`
     <h2>${id?'Editar plantão cadastrado':'Cadastrar novo plantão'}</h2>
     <p class="muted" style="margin:0 0 6px">Fica salvo para você usar sempre que quiser. Ex.: Hospital Tricentenário → Emergência pediátrica.</p>
-    <label>Local</label><select id="m_local" onchange="localEscolhido(this)">${opcoesLocal(m.localId)}</select>
+    <label>Local</label><select id="m_local" onchange="localEscolhido(this);mostraExistentes(this.value)">${opcoesLocal(m.localId)}</select>
+    <div id="m_existentes" class="muted" style="margin-top:6px"></div>
     <label>Nome do plantão</label><input id="m_nome" value="${esc(m.nome)}" placeholder="Ex.: Emergência pediátrica">
     <label>Cor</label><div class="cores" id="f_cores">${swatches(m.cor)}</div><input type="hidden" id="f_cor" value="${m.cor}">
     <label>Valor (R$)</label><input id="m_valor" inputmode="decimal" value="${m.valor||''}">
@@ -878,6 +893,13 @@ function editarModelo(id,localPreset){
         <button class="btn primary" onclick="salvarModelo('${id||''}')">Salvar</button>
       </div>
     </div>`);
+  mostraExistentes(m.localId);
+}
+function mostraExistentes(lid){
+  const el=document.getElementById('m_existentes');if(!el)return;
+  const ms=(db.modelos||[]).filter(m=>(m.localId||null)===(lid||null));
+  const l=local(lid);
+  el.innerHTML=ms.length?`Já cadastrados${l?' em '+esc(l.nome):''}: ${ms.map(m=>esc(m.nome)).join(', ')}.<br>Para lançar um deles num dia, use <b>+ Este dia</b> ou <b>+ Vários dias</b>.`:'';
 }
 function salvarModelo(id){
   const g=x=>document.getElementById(x).value;
