@@ -730,14 +730,16 @@ function classificarPlantao(p){
   const h=d.getHours();
   return (h>=7&&h<19)?'diurno':'noturno';
 }
-function filtrarResumo(localId,periodo,status){
+function filtrarResumo(localId,periodo,status,de,ate){
   return db.plantoes.filter(p=>
     (localId==='todos'||p.localId===localId) &&
-    (periodo==='todos'||diaDe(p).slice(0,7)===iso(mes).slice(0,7)) &&
+    (periodo==='todos'||
+      (periodo==='mes'&&diaDe(p).slice(0,7)===iso(mes).slice(0,7))||
+      (periodo==='intervalo'&&(!de||diaDe(p)>=de)&&(!ate||diaDe(p)<=ate))) &&
     (status==='todos'||(status==='pagos'?p.pago:!p.pago))
   ).sort((a,b)=>a.inicio.localeCompare(b.inicio));
 }
-function gerarTextoNota(lista){
+function gerarTextoNota(lista,de,ate){
   if(!lista.length)return 'Nenhum plantão encontrado com esses filtros.';
   const grupos={};
   lista.forEach(p=>{
@@ -755,7 +757,7 @@ function gerarTextoNota(lista){
     return `${CATS[g.cat]}, ${g.loc}, dias ${datas.join(', ')}, ${n} ${n===1?'plantão':'plantões'}, valor total ${dinheiro(v)}.`;
   });
   const total=lista.reduce((s,p)=>s+Number(p.valor||0),0);
-  const ini=dataBR(lista[0].inicio), fim=dataBR(lista[lista.length-1].inicio);
+  const ini=de?dataBR(de+'T00:00'):dataBR(lista[0].inicio), fim=ate?dataBR(ate+'T00:00'):dataBR(lista[lista.length-1].inicio);
   return `Período: ${ini} a ${fim}\n\n${partes.join('\n')}\n\nValor total: ${dinheiro(total)}`;
 }
 function abrirResumo(localId){
@@ -766,9 +768,14 @@ function abrirResumo(localId){
     <label>Local</label><select id="r_local" onchange="atualizaResumo()">${opts}</select>
     <label>Período</label>
     <select id="r_periodo" onchange="atualizaResumo()">
-      <option value="todos">Todo o período</option>
+      <option value="intervalo">Escolher datas (de / até)</option>
       <option value="mes">Só o mês exibido no calendário</option>
+      <option value="todos">Todo o período</option>
     </select>
+    <div id="r_datas" style="display:flex;gap:8px">
+      <div style="flex:1"><label>De</label><input id="r_de" type="date" value="${iso(new Date(mes.getFullYear(),mes.getMonth(),1))}" onchange="atualizaResumo()"></div>
+      <div style="flex:1"><label>Até</label><input id="r_ate" type="date" value="${iso(new Date(mes.getFullYear(),mes.getMonth()+1,0))}" onchange="atualizaResumo()"></div>
+    </div>
     <label>Situação</label>
     <select id="r_status" onchange="atualizaResumo()">
       <option value="todos">Todos</option>
@@ -786,13 +793,18 @@ function abrirResumo(localId){
 }
 function atualizaResumo(){
   const loc=document.getElementById('r_local').value;
-  const lista=filtrarResumo(loc,
-    document.getElementById('r_periodo').value,
-    document.getElementById('r_status').value);
+  const per=document.getElementById('r_periodo').value;
+  document.getElementById('r_datas').style.display=per==='intervalo'?'flex':'none';
+  let de='',ate='';
+  if(per==='intervalo'){
+    de=document.getElementById('r_de').value;ate=document.getElementById('r_ate').value;
+    if(de&&ate&&de>ate){[de,ate]=[ate,de];}
+  }
+  const lista=filtrarResumo(loc,per,document.getElementById('r_status').value,de,ate);
   const total=lista.reduce((s,p)=>s+Number(p.valor||0),0);
   document.getElementById('r_resumo').innerHTML=
     `<div class="totais" style="margin-top:12px"><div><small>Plantões</small><b>${lista.length}</b></div><div><small>Valor total</small><b>${dinheiro(total)}</b></div></div>`;
-  document.getElementById('r_texto').value=gerarTextoNota(lista);
+  document.getElementById('r_texto').value=gerarTextoNota(lista,de,ate);
 }
 function copiarNota(){
   const t=document.getElementById('r_texto');
