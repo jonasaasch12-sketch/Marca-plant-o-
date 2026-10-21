@@ -654,6 +654,7 @@ function salvarPlantao(id){
     obs:g('f_obs').value.trim()
   };
   let itens=[];
+  if(!id){const mid=(g('f_modelo')||{}).value;if(mid)dados.modeloId=mid;}
   if(id){
     const p=db.plantoes.find(x=>x.id===id);
     Object.assign(p,dados);
@@ -673,6 +674,7 @@ function salvarPlantao(id){
       const mod={id:uid(),nome:dados.nome,localId:dados.localId,cor:dados.cor,valor:dados.valor,
         hini:ini.split('T')[1].slice(0,5),hfim:fim.split('T')[1].slice(0,5)};
       db.modelos=db.modelos||[];db.modelos.push(mod);
+      itens.forEach(i=>{if(i.c==='plantoes')i.obj.modeloId=mod.id;});
       itens.push({c:'modelos',obj:mod});
     }
   }
@@ -712,11 +714,24 @@ function salvarLocal(id){
     nome,
     cor:document.getElementById('f_cor').value
   };
-  let obj;
-  if(id){obj=local(id);Object.assign(obj,dados);}
+  let obj, itens=[], n=0;
+  if(id){
+    obj=local(id);
+    const corAntiga=String(obj.cor||'').toLowerCase();
+    Object.assign(obj,dados);
+    if(corAntiga!==String(dados.cor).toLowerCase()){
+      // cadastros e plantões deste local que estavam com a cor do local acompanham a mudança
+      (db.modelos||[]).filter(m=>m.localId===id&&String(m.cor||'').toLowerCase()===corAntiga)
+        .forEach(m=>{m.cor=dados.cor;itens.push({c:'modelos',obj:m});});
+      db.plantoes.filter(p=>p.localId===id&&String(p.cor||'').toLowerCase()===corAntiga)
+        .forEach(p=>{p.cor=dados.cor;itens.push({c:'plantoes',obj:p});n++;});
+    }
+  }
   else{obj={id:uid(),...dados};db.locais.push(obj);}
-  gravarSeguro([{c:'locais',obj}]);
+  itens.unshift({c:'locais',obj});
+  gravarSeguro(itens);
   fechar();render();
+  if(n)mostrarAviso(`Cor do local atualizada em ${n} ${n===1?'plantão':'plantões'} do calendário.`);
 }
 
 function excluirLocal(id){
@@ -900,6 +915,7 @@ function salvarVarios(){
     if(parseDT(fimDT)<=parseDT(inicio))fimDT=addDias(fimDT,1);
     const obj={id:uid(),nome:g('v_nome').trim(),localId:g('v_local')||null,cor:g('f_cor'),
       valor,inicio,fim:fimDT,pago:false,dataPagamento:'',obs:g('v_obs').trim()};
+    if(g('v_modelo'))obj.modeloId=g('v_modelo');
     db.plantoes.push(obj);
     itens.push({c:'plantoes',obj});
   });
@@ -1098,6 +1114,15 @@ function mostraExistentes(lid){
   const l=local(lid);
   el.innerHTML=ms.length?`Já cadastrados${l?' em '+esc(l.nome):''}: ${ms.map(m=>esc(m.nome)).join(', ')}.<br>Para lançar um deles num dia, use <b>+ Este dia</b> ou <b>+ Vários dias</b>.`:'';
 }
+// Plantões lançados a partir de um cadastro: os ligados a ele (modeloId) e, para os antigos sem ligação,
+// os do mesmo local e nome. Só os que ainda estão com a cor antiga do cadastro (uma cor mudada à mão fica).
+function plantoesDoModelo(id,antes){
+  return db.plantoes.filter(p=>{
+    if(String(p.cor||'').toLowerCase()!==antes.cor)return false;
+    if(p.modeloId)return p.modeloId===id;
+    return (p.localId||null)===antes.localId&&chaveNome(p.nome)===chaveNome(antes.nome);
+  });
+}
 function salvarModelo(id){
   const g=x=>document.getElementById(x).value;
   const nome=g('m_nome').trim();
@@ -1110,12 +1135,22 @@ function salvarModelo(id){
     hini:g('m_ini')||'07:00',
     hfim:g('m_fim')||'19:00'
   };
-  let obj;
-  if(id){obj=db.modelos.find(x=>x.id===id);Object.assign(obj,dados);}
+  let obj, itens=[], n=0;
+  if(id){
+    obj=db.modelos.find(x=>x.id===id);
+    const antes={nome:obj.nome,localId:obj.localId||null,cor:String(obj.cor||'').toLowerCase()};
+    Object.assign(obj,dados);
+    if(antes.cor!==String(dados.cor).toLowerCase()){
+      const afetados=plantoesDoModelo(id,antes);
+      afetados.forEach(p=>{p.cor=dados.cor;p.modeloId=id;itens.push({c:'plantoes',obj:p});});
+      n=afetados.length;
+    }
+  }
   else{obj={id:uid(),...dados};db.modelos=db.modelos||[];db.modelos.push(obj);}
-  gravarSeguro([{c:'modelos',obj}]);
+  itens.unshift({c:'modelos',obj});
+  gravarSeguro(itens);
   fechar();render();
-  mostrarAviso(id?'Plantão cadastrado atualizado.':'Plantão cadastrado com sucesso.');
+  mostrarAviso(n?`Cor atualizada no cadastro e em ${n} ${n===1?'plantão':'plantões'} do calendário.`:(id?'Plantão cadastrado atualizado.':'Plantão cadastrado com sucesso.'));
 }
 let modoVarios=false;
 let diasMulti=new Set();
