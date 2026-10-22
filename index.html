@@ -216,7 +216,7 @@ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 // Paleta escolhida por diferença de cor (ΔE2000 ≥ 20 entre qualquer par): nenhuma fica parecida com outra.
 // Mostrada em Ajustes: confirma se o aparelho já carregou a versão nova
-const VERSAO='2026.10.22-7 (cadastros por mês)';
+const VERSAO='2026.10.22-8 (painel do administrador)';
 const PALETA=[['Vermelho','#e11d2e'],['Laranja','#f97316'],['Amarelo','#facc15'],['Lima','#84cc16'],['Verde','#15803d'],
   ['Turquesa','#14b8a6'],['Azul-claro','#38bdf8'],['Azul','#007aff'],['Azul-marinho','#172554'],['Roxo','#7c3aed'],
   ['Magenta','#ff00ff'],['Rosa','#f9a8d4'],['Marrom','#8e5a2e'],['Vinho','#800000'],['Cinza','#9ca3af']];
@@ -276,7 +276,7 @@ async function apagarColecao(nome){
 auth.onAuthStateChanged(async u=>{
   usuario=u;
   if(u){
-    try{await carregarDados();}
+    try{await carregarDados();registrarAcesso();}
     catch(e){
       db={locais:[],plantoes:[],modelos:[]};
       alert('Erro ao carregar seus dados: '+e.message);
@@ -287,6 +287,54 @@ auth.onAuthStateChanged(async u=>{
   pronto=true;
   render();
 });
+
+/* ============ ADMINISTRAÇÃO ============ */
+const ADMIN_EMAILS=['jonasaasch12@gmail.com'];
+function ehAdmin(){return !!(usuario&&ADMIN_EMAILS.includes(String(usuario.email||'').toLowerCase()));}
+// Ficha de uso de cada pessoa em users/{uid} (o próprio documento da pessoa; os dados ficam nas subcoleções).
+// Só o administrador consegue ler as fichas dos outros (regras do Firestore).
+function registrarAcesso(){
+  if(!usuario)return;
+  try{
+  const meta=usuario.metadata||{};
+  const criado=meta.creationTime?new Date(meta.creationTime):null;
+  fs.collection('users').doc(usuario.uid).set({
+    email:usuario.email||'',
+    criadoEm:criado,
+    ultimoAcesso:firebase.firestore.FieldValue.serverTimestamp(),
+    plantoes:db.plantoes.length,
+    locais:db.locais.length,
+    versao:VERSAO
+  },{merge:true}).catch(()=>{});
+  }catch(e){}
+}
+function dataDe(v){if(!v)return null;if(v.toDate)return v.toDate();const d=new Date(v);return isNaN(d)?null:d;}
+async function verUsuarios(){
+  const el=document.getElementById('adm');
+  el.innerHTML='<p class="muted">Carregando…</p>';
+  try{
+    const snap=await fs.collection('users').get();
+    const lista=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.email);
+    const agora=Date.now(), dia=864e5;
+    const ini=new Date();ini.setDate(1);ini.setHours(0,0,0,0);
+    const ult=u=>dataDe(u.ultimoAcesso), cri=u=>dataDe(u.criadoEm);
+    const ativos=n=>lista.filter(u=>ult(u)&&agora-ult(u)<=n*dia).length;
+    const novos=lista.filter(u=>cri(u)&&cri(u)>=ini).length;
+    const fmt=d=>d?d.toLocaleDateString('pt-BR'):'—';
+    lista.sort((a,b)=>(ult(b)||0)-(ult(a)||0));
+    el.innerHTML=`<div class="stats" style="grid-template-columns:repeat(2,1fr);margin:12px 0">
+      <div><small>Cadastrados</small><b>${lista.length}</b></div>
+      <div><small>Novos neste mês</small><b>${novos}</b></div>
+      <div><small>Usaram nos últimos 7 dias</small><b>${ativos(7)}</b></div>
+      <div><small>Usaram nos últimos 30 dias</small><b>${ativos(30)}</b></div>
+    </div>
+    ${lista.map(u=>`<div class="item-modelo" style="cursor:default"><span><b>${esc(u.email)}</b><br><small class="muted">Cadastro ${fmt(cri(u))} · último acesso ${fmt(ult(u))}</small></span><span class="muted" style="text-align:right;font-size:13px">${u.plantoes||0} ${(u.plantoes||0)===1?'plantão':'plantões'}<br>${u.locais||0} ${(u.locais||0)===1?'local':'locais'}</span></div>`).join('')}
+    <p class="muted" style="font-size:12.5px;margin:10px 0 0">Conta quem abriu o app a partir desta versão. O total de contas criadas também aparece no Firebase, em Authentication.</p>`;
+  }catch(e){
+    el.innerHTML=`<p class="erro" style="text-align:left">Não consegui ler os usuários: ${esc(e.message)}</p>
+    <p class="muted" style="margin:6px 0 0">Atualize as regras do Firestore para permitir a leitura pelo administrador.</p>`;
+  }
+}
 
 function msgErro(e){
   const m={
@@ -578,6 +626,12 @@ function vAjustes(){
     <p style="margin:0 0 12px">Conectado como <b>${esc(usuario.email)}</b></p>
     <button class="btn" style="width:100%" onclick="sair()">Sair da conta</button>
   </div>
+  ${ehAdmin()?`<div class="titulo-sec">Administrador</div>
+  <div class="painel">
+    <p class="muted" style="margin:0 0 12px">Quantas pessoas se cadastraram e estão usando o app.</p>
+    <button class="btn primary" style="width:100%" onclick="verUsuarios()">Ver usuários do app</button>
+    <div id="adm"></div>
+  </div>`:''}
   <div class="titulo-sec">Backup</div>
   <div class="painel">
     <p class="muted" style="margin:0 0 12px">Faça um backup de vez em quando, para ter uma cópia guardada no seu aparelho.</p>
