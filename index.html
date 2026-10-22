@@ -216,7 +216,7 @@ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 // Paleta escolhida por diferença de cor (ΔE2000 ≥ 20 entre qualquer par): nenhuma fica parecida com outra.
 // Mostrada em Ajustes: confirma se o aparelho já carregou a versão nova
-const VERSAO='2026.10.21-6 (deslizar no calendário)';
+const VERSAO='2026.10.22-7 (cadastros por mês)';
 const PALETA=[['Vermelho','#e11d2e'],['Laranja','#f97316'],['Amarelo','#facc15'],['Lima','#84cc16'],['Verde','#15803d'],
   ['Turquesa','#14b8a6'],['Azul-claro','#38bdf8'],['Azul','#007aff'],['Azul-marinho','#172554'],['Roxo','#7c3aed'],
   ['Magenta','#ff00ff'],['Rosa','#f9a8d4'],['Marrom','#8e5a2e'],['Vinho','#800000'],['Cinza','#9ca3af']];
@@ -549,16 +549,16 @@ function vLocais(){
     <button class="btn primary" onclick="editarLocal()">${ic('mais')}Novo local</button>
     <button class="btn soft" style="grid-column:1/-1" onclick="abrirResumo('todos')">${ic('nota')}Resumo geral para nota fiscal</button>
   </div>`;
-  if(db.locais.length)h+='<div class="titulo-sec">Seus locais</div>';
+  if(db.locais.length)h+=`<div class="painel" style="padding:10px 12px;margin-top:6px">${mesNav().replace('class="mesnav"','class="mesnav" style="margin:0"')}</div><div class="titulo-sec">Seus locais</div>`;
   if(!db.locais.length)h+='<p class="vazio">Cadastre um local (ex.: Hospital Tricentenário) e depois crie os plantões dentro dele.</p>';
   h+=db.locais.map(l=>{
-    const ps=db.plantoes.filter(p=>p.localId===l.id);
+    const ps=db.plantoes.filter(p=>p.localId===l.id&&doMes(p));
     const tot=ps.reduce((s,p)=>s+Number(p.valor||0),0);
     const ms=modelos.filter(m=>m.localId===l.id);
     return `<div class="card" style="border-left:5px solid ${l.cor};cursor:default">
       <div class="linha"><span class="nome" style="margin:0;cursor:pointer" onclick="editarLocal('${l.id}')">${esc(l.nome)}</span>
       <button class="chip" onclick="abrirResumo('${l.id}')">${ic('nota')}Nota</button></div>
-      <div class="muted" style="margin-top:4px">${ps.length} ${ps.length===1?'plantão lançado':'plantões lançados'} · ${dinheiro(tot)} no total</div>
+      <div class="muted" style="margin-top:4px">${MESES[mes.getMonth()]}: ${ps.length} ${ps.length===1?'plantão lançado':'plantões lançados'} · ${dinheiro(tot)}</div>
       <div class="titulo-sec" style="margin:14px 0 2px">Plantões cadastrados</div>
       ${ms.length?ms.map(itemModelo).join(''):'<p class="muted" style="margin:6px 0">Nenhum plantão neste local ainda.</p>'}
       <button class="btn soft" style="width:100%;margin-top:10px" onclick="editarModelo(null,'${l.id}')">${ic('mais')}Plantão em ${esc(l.nome)}</button>
