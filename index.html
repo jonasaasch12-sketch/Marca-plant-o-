@@ -216,7 +216,7 @@ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 // Paleta escolhida por diferença de cor (ΔE2000 ≥ 20 entre qualquer par): nenhuma fica parecida com outra.
 // Mostrada em Ajustes: confirma se o aparelho já carregou a versão nova
-const VERSAO='2026.10.22-9 (admin só cadastros)';
+const VERSAO='2026.10.22-10 (como instalar)';
 const PALETA=[['Vermelho','#e11d2e'],['Laranja','#f97316'],['Amarelo','#facc15'],['Lima','#84cc16'],['Verde','#15803d'],
   ['Turquesa','#14b8a6'],['Azul-claro','#38bdf8'],['Azul','#007aff'],['Azul-marinho','#172554'],['Roxo','#7c3aed'],
   ['Magenta','#ff00ff'],['Rosa','#f9a8d4'],['Marrom','#8e5a2e'],['Vinho','#800000'],['Cinza','#9ca3af']];
@@ -287,6 +287,34 @@ auth.onAuthStateChanged(async u=>{
   pronto=true;
   render();
 });
+
+/* ============ INSTALAR NO CELULAR ============ */
+let pedidoInstalar=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();pedidoInstalar=e;});
+window.addEventListener('appinstalled',()=>{pedidoInstalar=null;mostrarAviso('App instalado na tela inicial.');});
+function appInstalado(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;}
+function sistemaDoCelular(){
+  const ua=navigator.userAgent||'';
+  if(/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1))return 'ios';
+  return 'android';
+}
+function comoInstalar(qual){
+  qual=qual||sistemaDoCelular();
+  const aba=(k,t)=>`<button class="${qual===k?'on':''}" onclick="comoInstalar('${k}')">${t}</button>`;
+  abrirForm(`
+    <h2>Instalar no celular</h2>
+    ${appInstalado()?'<p class="pill ok" style="cursor:default;margin:0 0 10px">O app já está instalado neste aparelho</p>':''}
+    ${pedidoInstalar&&!appInstalado()?`<button class="btn primary" style="width:100%;margin:4px 0 12px" onclick="instalarAgora()">${ic('mais')}Instalar agora</button>`:''}
+    <div class="filtros" style="margin:6px 0 12px">${aba('ios','iPhone')}${aba('android','Android')}</div>
+    <img src="marca/instalar-${qual==='ios'?'iphone':'android'}.jpg" alt="Passo a passo para instalar no ${qual==='ios'?'iPhone':'Android'}" style="width:100%;border-radius:16px;display:block">
+    <div class="acoes"><div class="direita"><button class="btn" onclick="fechar()">Fechar</button></div></div>`);
+}
+async function instalarAgora(){
+  if(!pedidoInstalar)return;
+  pedidoInstalar.prompt();
+  try{await pedidoInstalar.userChoice;}catch(e){}
+  pedidoInstalar=null;fechar();
+}
 
 /* ============ ADMINISTRAÇÃO ============ */
 const ADMIN_EMAILS=['jonasaasch12@gmail.com'];
@@ -519,6 +547,7 @@ function vLogin(){
       <p id="a_msg" class="erro"></p>
     </div>
     <p class="muted" style="text-align:center;font-size:13px">Seus dados ficam salvos na sua conta e aparecem em qualquer aparelho.</p>
+    ${appInstalado()?'':`<button class="btn link" style="width:100%" onclick="comoInstalar()">Como instalar no celular</button>`}
   </div>`;
 }
 
@@ -636,6 +665,11 @@ function vAjustes(){
     <button class="btn primary" style="width:100%" onclick="verUsuarios()">Ver usuários do app</button>
     <div id="adm"></div>
   </div>`:''}
+  <div class="titulo-sec">Aplicativo</div>
+  <div class="painel">
+    <p class="muted" style="margin:0 0 12px">${appInstalado()?'O app está instalado neste aparelho.':'Deixe o app na tela inicial do celular, com ícone próprio.'}</p>
+    <button class="btn soft" style="width:100%" onclick="comoInstalar()">${ic('mais')}Como instalar no celular</button>
+  </div>
   <div class="titulo-sec">Backup</div>
   <div class="painel">
     <p class="muted" style="margin:0 0 12px">Faça um backup de vez em quando, para ter uma cópia guardada no seu aparelho.</p>
