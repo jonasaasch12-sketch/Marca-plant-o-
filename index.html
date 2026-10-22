@@ -216,7 +216,7 @@ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 // Paleta escolhida por diferença de cor (ΔE2000 ≥ 20 entre qualquer par): nenhuma fica parecida com outra.
 // Mostrada em Ajustes: confirma se o aparelho já carregou a versão nova
-const VERSAO='2026.10.22-8 (painel do administrador)';
+const VERSAO='2026.10.22-9 (admin só cadastros)';
 const PALETA=[['Vermelho','#e11d2e'],['Laranja','#f97316'],['Amarelo','#facc15'],['Lima','#84cc16'],['Verde','#15803d'],
   ['Turquesa','#14b8a6'],['Azul-claro','#38bdf8'],['Azul','#007aff'],['Azul-marinho','#172554'],['Roxo','#7c3aed'],
   ['Magenta','#ff00ff'],['Rosa','#f9a8d4'],['Marrom','#8e5a2e'],['Vinho','#800000'],['Cinza','#9ca3af']];
@@ -291,20 +291,24 @@ auth.onAuthStateChanged(async u=>{
 /* ============ ADMINISTRAÇÃO ============ */
 const ADMIN_EMAILS=['jonasaasch12@gmail.com'];
 function ehAdmin(){return !!(usuario&&ADMIN_EMAILS.includes(String(usuario.email||'').toLowerCase()));}
-// Ficha de uso de cada pessoa em users/{uid} (o próprio documento da pessoa; os dados ficam nas subcoleções).
+// Ficha de cadastro de cada pessoa em users/{uid}: só e-mail, data do cadastro e acessos.
+// Nenhum dado de plantão, local ou valor entra aqui (esses ficam nas subcoleções, só para a própria pessoa).
 // Só o administrador consegue ler as fichas dos outros (regras do Firestore).
 function registrarAcesso(){
   if(!usuario)return;
   try{
   const meta=usuario.metadata||{};
   const criado=meta.creationTime?new Date(meta.creationTime):null;
+  const FV=firebase.firestore.FieldValue;
   fs.collection('users').doc(usuario.uid).set({
     email:usuario.email||'',
     criadoEm:criado,
-    ultimoAcesso:firebase.firestore.FieldValue.serverTimestamp(),
-    plantoes:db.plantoes.length,
-    locais:db.locais.length,
-    versao:VERSAO
+    ultimoAcesso:FV.serverTimestamp(),
+    acessos:FV.increment(1),
+    // remove contagens gravadas por uma versão anterior
+    plantoes:FV.delete(),
+    locais:FV.delete(),
+    versao:FV.delete()
   },{merge:true}).catch(()=>{});
   }catch(e){}
 }
@@ -328,7 +332,7 @@ async function verUsuarios(){
       <div><small>Usaram nos últimos 7 dias</small><b>${ativos(7)}</b></div>
       <div><small>Usaram nos últimos 30 dias</small><b>${ativos(30)}</b></div>
     </div>
-    ${lista.map(u=>`<div class="item-modelo" style="cursor:default"><span><b>${esc(u.email)}</b><br><small class="muted">Cadastro ${fmt(cri(u))} · último acesso ${fmt(ult(u))}</small></span><span class="muted" style="text-align:right;font-size:13px">${u.plantoes||0} ${(u.plantoes||0)===1?'plantão':'plantões'}<br>${u.locais||0} ${(u.locais||0)===1?'local':'locais'}</span></div>`).join('')}
+    ${lista.map(u=>`<div class="item-modelo" style="cursor:default"><span><b>${esc(u.email)}</b><br><small class="muted">Cadastro ${fmt(cri(u))} · último acesso ${fmt(ult(u))}</small></span><span class="muted" style="text-align:right;font-size:13px;white-space:nowrap">${u.acessos||1} ${(u.acessos||1)===1?'acesso':'acessos'}</span></div>`).join('')}
     <p class="muted" style="font-size:12.5px;margin:10px 0 0">Conta quem abriu o app a partir desta versão. O total de contas criadas também aparece no Firebase, em Authentication.</p>`;
   }catch(e){
     el.innerHTML=`<p class="erro" style="text-align:left">Não consegui ler os usuários: ${esc(e.message)}</p>
@@ -628,7 +632,7 @@ function vAjustes(){
   </div>
   ${ehAdmin()?`<div class="titulo-sec">Administrador</div>
   <div class="painel">
-    <p class="muted" style="margin:0 0 12px">Quantas pessoas se cadastraram e estão usando o app.</p>
+    <p class="muted" style="margin:0 0 12px">Cadastros e acessos ao app. Os plantões e dados de cada pessoa não aparecem aqui.</p>
     <button class="btn primary" style="width:100%" onclick="verUsuarios()">Ver usuários do app</button>
     <div id="adm"></div>
   </div>`:''}
